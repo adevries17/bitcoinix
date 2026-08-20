@@ -273,13 +273,23 @@ in {
               echo "Create custom macaroon ${macaroon}"
               macaroonPath="$RUNTIME_DIRECTORY/${macaroon}.macaroon"
               adminMacaroonHex=$(${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon')
+              # $RUNTIME_DIRECTORY is writable by the lnd service user, so this
+              # root script must not write or chown through a path the lnd
+              # process could have pre-planted as a symlink (else a compromised
+              # lnd escalates to arbitrary root file overwrite/chown). Write to
+              # an unpredictable root-owned temp file, then atomically rename it
+              # into place — rename replaces the destination without following a
+              # symlink, and the chown only ever touches our own temp file.
+              macaroonTmp=$(${pkgs.coreutils}/bin/mktemp "$RUNTIME_DIRECTORY/.${macaroon}.XXXXXX")
               ${curl} \
                 -H @<(printf 'Grpc-Metadata-macaroon: %s\n' "$adminMacaroonHex") \
                 -X POST \
                 -d '{"permissions":[${cfg.macaroons.${macaroon}.permissions}]}' \
                 ${restUrl}/macaroon |\
-                ${pkgs.jq}/bin/jq -c '.macaroon' | ${pkgs.xxd}/bin/xxd -p -r > "$macaroonPath"
-              chown ${cfg.macaroons.${macaroon}.user}: "$macaroonPath"
+                ${pkgs.jq}/bin/jq -c '.macaroon' | ${pkgs.xxd}/bin/xxd -p -r > "$macaroonTmp"
+              ${pkgs.coreutils}/bin/chmod ug=r,o= "$macaroonTmp"
+              chown ${cfg.macaroons.${macaroon}.user}: "$macaroonTmp"
+              ${pkgs.coreutils}/bin/mv -f "$macaroonTmp" "$macaroonPath"
             '') (attrNames cfg.macaroons)}
           '';
         in [
