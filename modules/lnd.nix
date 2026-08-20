@@ -269,27 +269,30 @@ in {
           # world-readable through /proc/<pid>/cmdline
           script = nbLib.rootScript "lnd-create-macaroons" ''
             umask ug=r,o=
+            # $RUNTIME_DIRECTORY (/run/lnd) is writable by the lnd service user,
+            # so this root script must never write/chmod/chown through a path the
+            # lnd process could tamper with (else a compromised lnd escalates to
+            # arbitrary root file overwrite/chown). Staging in $RUNTIME_DIRECTORY
+            # is NOT enough — lnd owns that directory and can unlink our temp file
+            # and swap in a symlink before we write to it. Stage instead in a
+            # ROOT-ONLY directory (mode 0700, owned by root, that lnd cannot enter
+            # or replace) on the SAME tmpfs as /run/lnd, so the final move is a
+            # rename(2): atomic, and it replaces the destination without following
+            # a symlink lnd may have planted there.
+            staging=$(${pkgs.coreutils}/bin/mktemp -d "/run/lnd-macaroons.XXXXXX")
+            trap '${pkgs.coreutils}/bin/rm -rf "$staging"' EXIT
             ${lib.concatMapStrings (macaroon: ''
               echo "Create custom macaroon ${macaroon}"
-              macaroonPath="$RUNTIME_DIRECTORY/${macaroon}.macaroon"
+              macaroonTmp="$staging/${macaroon}.macaroon"
               adminMacaroonHex=$(${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon')
-              # $RUNTIME_DIRECTORY is writable by the lnd service user, so this
-              # root script must not write or chown through a path the lnd
-              # process could have pre-planted as a symlink (else a compromised
-              # lnd escalates to arbitrary root file overwrite/chown). Write to
-              # an unpredictable root-owned temp file, then atomically rename it
-              # into place — rename replaces the destination without following a
-              # symlink, and the chown only ever touches our own temp file.
-              macaroonTmp=$(${pkgs.coreutils}/bin/mktemp "$RUNTIME_DIRECTORY/.${macaroon}.XXXXXX")
               ${curl} \
                 -H @<(printf 'Grpc-Metadata-macaroon: %s\n' "$adminMacaroonHex") \
                 -X POST \
                 -d '{"permissions":[${cfg.macaroons.${macaroon}.permissions}]}' \
                 ${restUrl}/macaroon |\
                 ${pkgs.jq}/bin/jq -c '.macaroon' | ${pkgs.xxd}/bin/xxd -p -r > "$macaroonTmp"
-              ${pkgs.coreutils}/bin/chmod ug=r,o= "$macaroonTmp"
               chown ${cfg.macaroons.${macaroon}.user}: "$macaroonTmp"
-              ${pkgs.coreutils}/bin/mv -f "$macaroonTmp" "$macaroonPath"
+              ${pkgs.coreutils}/bin/mv -f "$macaroonTmp" "$RUNTIME_DIRECTORY/${macaroon}.macaroon"
             '') (attrNames cfg.macaroons)}
           '';
         in [
