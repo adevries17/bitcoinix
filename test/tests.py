@@ -189,6 +189,47 @@ def _():
     assert_str_matches(cert_alt_names, '20.0.0.1')
     assert_str_matches(cert_alt_names, 'example.com')
 
+@test("lnd-macaroon-read-deprivileged")
+def _():
+    # Regression test for the 2026-08-30 audit finding (modules/lnd.nix): the
+    # root ExecStartPost that mints custom macaroons must read admin.macaroon AS
+    # THE LND USER, never as root. admin.macaroon sits in lnd's own 0770 datadir,
+    # so a compromised lnd can replace it with a symlink to a root-only file; if
+    # root dereferences it, the bytes are exfiltrated to lnd via the REST call.
+    # Reading as the lnd user fails closed on such a symlink.
+    assert_running("lnd")
+
+    # (a) Pin the deployed unit: the macaroon read must go through the run-as-lnd
+    #     wrapper. Reverting the fix to a bare root `xxd ... admin.macaroon`
+    #     makes this grep fail.
+    script = succeed(
+        "systemctl show lnd -p ExecStartPost --value | "
+        "grep -oE '/nix/store/[a-z0-9]+-lnd-create-macaroons' | head -1"
+    ).strip()
+    assert script, "lnd-create-macaroons ExecStartPost script not found"
+    assert_matches(
+        f"cat {script}",
+        r"runuser -u lnd [^\n]*xxd[^\n]*admin\.macaroon",
+    )
+
+    # (b) Prove the runtime asymmetry the fix relies on, in lnd's real datadir,
+    #     as the real lnd user, without disrupting the service. The canary sits
+    #     in a traversable dir (/run) but is root-only readable, mirroring the
+    #     real targets (backup passphrase, wg key, host keys).
+    succeed(
+        "printf ROOT_ONLY_CANARY > /run/macaroon-canary",
+        "chown root:root /run/macaroon-canary",
+        "chmod 400 /run/macaroon-canary",
+    )
+    link = "/var/lib/lnd/attack-test-link"
+    # The attacker is the lnd user, which owns its 0770 datadir.
+    succeed(f"runuser -u lnd -- ln -sf /run/macaroon-canary {link}")
+    # Root WOULD read the canary through the symlink (the exploit precondition).
+    assert_matches(f"cat {link}", "ROOT_ONLY_CANARY")
+    # The lnd user must NOT be able to — so the fix's read fails closed.
+    machine.fail(f"runuser -u lnd -- cat {link}")
+    succeed(f"rm -f {link} /run/macaroon-canary")
+
 @test("lndconnect-onion-lnd")
 def _():
     assert_running("lnd")

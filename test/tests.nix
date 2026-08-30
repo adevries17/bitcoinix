@@ -96,6 +96,9 @@ let
       };
 
       tests.lnd = cfg.lnd.enable;
+      # Runs only when a custom macaroon exists, so the ExecStartPost read the
+      # test pins is actually present (btcpayserver provides one).
+      tests.lnd-macaroon-read-deprivileged = cfg.lnd.enable && cfg.lnd.macaroons != {};
       services.lnd = {
         port = 9736;
         certificate = {

@@ -284,7 +284,15 @@ in {
             ${lib.concatMapStrings (macaroon: ''
               echo "Create custom macaroon ${macaroon}"
               macaroonTmp="$staging/${macaroon}.macaroon"
-              adminMacaroonHex=$(${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon')
+              # Read admin.macaroon AS the lnd user, never as root: it lives in
+              # lnd's own 0770 datadir, so a compromised lnd could plant a
+              # symlink there and have this root script dereference it to
+              # exfiltrate an arbitrary root-only file (backup passphrase, wg
+              # key, host keys) via the REST call below. Reading as the lnd user
+              # fails closed on such a symlink — lnd cannot read what lnd cannot
+              # read — and grants no access lnd does not already have. (The write
+              # path above is already symlink-hardened; this closes the read.)
+              adminMacaroonHex=$(${pkgs.util-linux}/bin/runuser -u ${cfg.user} -- ${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon')
               ${curl} \
                 -H @<(printf 'Grpc-Metadata-macaroon: %s\n' "$adminMacaroonHex") \
                 -X POST \
