@@ -20,6 +20,11 @@ let
             # Print URL
             lndconnect --url
           ```
+
+          This does not change the listen address of the lnd REST server
+          (`services.lnd.restAddress`), which is localhost by default.
+          To connect a client, enable `services.lnd.lndconnect.onion`, use
+          the WireGuard preset, or set `services.lnd.restAddress` yourself.
         '';
       };
       onion = mkOption {
@@ -49,6 +54,12 @@ let
             # Print URL
             lnconnect-clnrest --url
           ```
+
+          This does not change the listen address of the clnrest server
+          (`services.clightning.plugins.clnrest.address`), which is localhost by default.
+          To connect a client, enable
+          `services.clightning.plugins.clnrest.lnconnect.onion`, use the
+          WireGuard preset, or set the address yourself.
         '';
       };
       onion = mkOption {
@@ -194,7 +205,7 @@ in {
             }
           )];
 
-          services.lnd.restAddress = mkIf (!lnd.lndconnect.onion) "0.0.0.0";
+          # Don't change `lnd.restAddress`. Exposing the REST API must be an explicit choice.
         }
 
         (mkIf lnd.lndconnect.onion {
@@ -228,7 +239,7 @@ in {
             }
           )];
 
-          services.clightning.plugins.clnrest.address = mkIf (!clnrest.lnconnect.onion) "0.0.0.0";
+          # Don't change `clnrest.address`. Exposing the REST API must be an explicit choice.
         }
 
         (mkIf clnrest.lnconnect.onion {
