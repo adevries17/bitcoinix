@@ -105,6 +105,21 @@ let
       tests.lnconnect-onion-clnrest = with cfg.clightning.plugins.clnrest.lnconnect; enable && onion;
       tests.lndconnect-onion-clightning = with cfg.clightning-rest.lndconnect; enable && onion;
 
+      # lndconnect without onion must leave the REST servers on localhost.
+      # With netns-isolation, the addresses are set by netns-isolation.
+      tests.lndconnect-local-bind =
+        !config.nix-bitcoin.netns-isolation.enable
+        && config.test.data.lndconnect-local-bind != [];
+      test.data.lndconnect-local-bind =
+        optional (with cfg.lnd; enable && lndconnect.enable && !lndconnect.onion) {
+          unit = "lnd";
+          port = cfg.lnd.restPort;
+        }
+        ++ optional (with cfg.clightning.plugins.clnrest; enable && lnconnect.enable && !lnconnect.onion) {
+          unit = "clightning";
+          port = cfg.clightning.plugins.clnrest.port;
+        };
+
       tests.lightning-loop = cfg.lightning-loop.enable;
       services.lightning-loop.certificate.extraIPs = [ "20.0.0.1" ];
 
@@ -236,12 +251,17 @@ let
     regtest = {
       imports = [ scenarios.regtestBase ];
       services.clightning.enable = true;
+      services.clightning.plugins.clnrest = {
+        enable = true;
+        lnconnect.enable = true;
+      };
       test.features.clightningPlugins = true;
       services.clightning-rest.enable = true;
       services.liquidd.enable = true;
       services.rtl.enable = true;
       services.mempool.enable = true;
       services.lnd.enable = true;
+      services.lnd.lndconnect.enable = true;
       services.lightning-loop.enable = true;
       services.lightning-pool.enable = true;
       services.charge-lnd.enable = true;

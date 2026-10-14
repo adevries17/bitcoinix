@@ -190,6 +190,17 @@ def _():
     assert_running("clightning-rest")
     assert_matches("runuser -u operator -- lndconnect-clightning --url", ".onion")
 
+@test("lndconnect-local-bind")
+def _():
+    for service in test_data["lndconnect-local-bind"]:
+        port = service["port"]
+        assert_running(service["unit"])
+        wait_for_open_port("127.0.0.1", port)
+        # The REST server must listen on localhost only
+        assert_full_match(
+            f"ss -Htnl 'sport = :{port}' | awk '{{print $4}}' | sort -u", f"127.0.0.1:{port}\n"
+        )
+
 @test("lightning-loop")
 def _():
     assert_running("lightning-loop")
