@@ -5,7 +5,7 @@
 
 > [!WARNING]
 > This documentation may be outdated or contain installation steps that do not work with
-> bitcoinix yet (for example, release fetching still points at the upstream nix-bitcoin project).
+> bitcoinix yet.
 > Please report problems at <https://github.com/bitcoinix/bitcoinix/issues>.
 
 This tutorial describes how to manage your Bitcoin node comfortably from your personal computer with the deployment tool [krops](https://github.com/krebs/krops).
@@ -219,9 +219,40 @@ You can also build Nix from source by following the instructions at https://nixo
 
     ```
     git clone https://github.com/bitcoinix/bitcoinix
+    cd bitcoinix
     ```
 
-2. Create a new directory for your bitcoinix node config and copy initial files from bitcoinix
+2. Verify the release signing keys
+
+    A bitcoinix release is a signed git tag. The list of keys that may sign releases lives in
+    the repository you just cloned, so it cannot vouch for itself. Print the fingerprints
+    of the listed keys:
+
+    ```
+    grep -v '^#' helper/release-keys/ssh-allowed-signers | cut -d' ' -f3- | ssh-keygen -lf -
+    ```
+
+    The release tag key, `SHA256:2o/0Op+64zKgF4oMaS0LGOiGPNDsibaqX6g8qMf5Hz0`, is also
+    published outside this repository at <https://seberm.com/ssh.html>. Verify that statement
+    as described on that page and check that the same fingerprint is listed above. Do not
+    continue if it is not.
+
+3. Verify and check out the latest release
+
+    ```
+    git config gpg.ssh.allowedSignersFile helper/release-keys/ssh-allowed-signers
+    git config gpg.ssh.revocationFile helper/release-keys/ssh-revoked-keys
+    git tag -l 'v*' --sort=-v:refname | head -1    # the latest release, e.g. v0.1.0
+    git tag -v v<version>
+    git checkout v<version>
+    cd ..
+    ```
+
+    `git tag -v` must report `Good "git" signature` with the release tag key fingerprint
+    from the previous step. Checking out the tag makes sure that the files used below, including
+    `fetch-release.sh` and its key files, are the ones that were signed.
+
+4. Create a new directory for your bitcoinix node config and copy initial files from bitcoinix
 
     ```
     mkdir nix-bitcoin-node
@@ -229,17 +260,26 @@ You can also build Nix from source by following the instructions at https://nixo
     cp -r ../bitcoinix/examples/{configuration.nix,shell.nix,krops,.gitignore} .
     ```
 
-3. Obtain the hash of the latest bitcoinix release
+5. Obtain the hash of the latest bitcoinix release
 
     ```
-    ../bitcoinix/helper/fetch-release > nix-bitcoin-release.nix
+    ../bitcoinix/helper/fetch-release.sh > nix-bitcoin-release.nix
     ```
+
+    `fetch-release` picks the highest signed release tag, verifies it against
+    `helper/release-keys/ssh-allowed-signers` and `helper/release-keys/ssh-revoked-keys`, and
+    refuses to emit a hash for an unsigned tag, or for a tag signed by an unknown or revoked
+    key. Pass `releaseVersion=<version>` to pin a specific release. Set `checkDownload=1` to
+    additionally download the release archive into a throwaway Nix store and check that it is
+    exactly the signed tree.
 
     > [!WARNING]
-    > `fetch-release` is not adapted to bitcoinix yet: it still downloads and verifies the latest
-    > release of the archived upstream project
-    > ([fort-nix/nix-bitcoin](https://github.com/fort-nix/nix-bitcoin)), not of bitcoinix.
-    > bitcoinix does not publish signed releases yet.
+    > bitcoinix has not published its first release tag yet, so this command currently
+    > fails with "No release tags found", and step 3 has no tag to verify. Until then, point
+    > `nix-bitcoin-release.nix` at
+    > your bitcoinix checkout instead, as
+    > [examples/nix-bitcoin-release.nix](https://github.com/bitcoinix/bitcoinix/blob/master/examples/nix-bitcoin-release.nix)
+    > does.
 
 #### Optional: Specify the system of your node
 This enables evaluating your node config on a machine that has a different system platform

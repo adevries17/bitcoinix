@@ -1,0 +1,12 @@
+# Release signing: the trusted keys, the tools that verify against them and the
+# docs that tell users how to verify. Changes here alter what users trust.
+#
+# This only takes effect with a branch protection rule (or ruleset) on master
+# that requires review from code owners. See "Cutting a release" in dev/README.md.
+
+/helper/release-keys/           @seberm @prusnak
+/helper/fetch-release.sh        @seberm @prusnak
+/helper/make-release.sh         @seberm @prusnak
+/.github/workflows/release.yml  @seberm @prusnak
+/.github/CODEOWNERS             @seberm @prusnak
+/SECURITY.md                    @seberm @prusnak

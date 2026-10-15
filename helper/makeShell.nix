@@ -14,7 +14,7 @@ pkgs.stdenv.mkDerivation {
   name = "nix-bitcoin-environment";
 
   helpMessage = ''
-    nix-bitcoin path: ${toString ../.}
+    bitcoinix path: ${toString ../.}
 
     Available commands
     ==================
@@ -38,7 +38,7 @@ pkgs.stdenv.mkDerivation {
       This function is automatically called by krops-deploy.
 
     update-nix-bitcoin
-      Fetch and use the latest version of nix-bitcoin
+      Fetch, verify and use the latest signed bitcoinix release
   '';
 
   shellHook = ''
@@ -59,14 +59,16 @@ pkgs.stdenv.mkDerivation {
     h() { help; }
 
     fetch-release() {
-      ${toString ./fetch-release}
+      ${toString ./fetch-release.sh}
     }
 
     update-nix-bitcoin() {(
       set -euo pipefail
       releaseFile="${cfgDir}/nix-bitcoin-release.nix"
       current=$(cat "$releaseFile" 2>/dev/null || true)
-      new=$(fetch-release)
+      # Never move back to an older release than the one pinned now
+      currentVersion=$(sed -nE 's/^# bitcoinix release v([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' <<<"$current")
+      new=$(minVersion=$currentVersion fetch-release)
       if [[ $new == $current ]]; then
         echo "nix-bitcoin-release.nix already contains the latest release"
       else
@@ -134,7 +136,7 @@ pkgs.stdenv.mkDerivation {
         # On macOS, `builtins.currentSystem` (`*-darwin`) can never equal
         # the node system (`*-linux`), so we can always provide a helpful error message:
         >&2 echo "Error, node system not set. See here how to fix this:"
-        >&2 echo "https://github.com/fort-nix/nix-bitcoin/blob/master/docs/install.md#optional-specify-the-system-of-your-node"
+        >&2 echo "https://github.com/bitcoinix/bitcoinix/blob/master/docs/install.md#optional-specify-the-system-of-your-node"
         return 1
       fi
     };
