@@ -10,8 +10,8 @@ mkdir -p "$destDir/"{bin,lib}
 cd "$destDir"
 
 if [[ ! -e src ]]; then
-    echo "Cloning fort-nix/nix-bitcoin"
-    git clone https://github.com/fort-nix/nix-bitcoin src
+    echo "Cloning bitcoinix/bitcoinix"
+    git clone https://github.com/bitcoinix/bitcoinix src
 fi
 
 echo 'export root=$PWD
