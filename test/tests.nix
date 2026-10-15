@@ -130,6 +130,11 @@ let
           port = cfg.clightning.plugins.clnrest.port;
         };
 
+      # With netns-isolation, the address is set by netns-isolation.
+      tests.clightning-rest-local-bind =
+        cfg.clightning-rest.enable && !config.nix-bitcoin.netns-isolation.enable;
+      test.data.clightning-rest-local-bind = with cfg.clightning-rest; [ port docPort ];
+
       tests.lightning-loop = cfg.lightning-loop.enable;
       services.lightning-loop.certificate.extraIPs = [ "20.0.0.1" ];
 

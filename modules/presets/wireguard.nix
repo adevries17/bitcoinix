@@ -204,7 +204,7 @@ in {
     services.clightning.tor.enforce = mkIf lnconnect-clnrest false;
 
     services.clightning-rest = mkIf lndconnect-clightning {
-      # clightning-rest always listens on "0.0.0.0"
+      address = "0.0.0.0";
       tor.enforce = false;
     };
 
