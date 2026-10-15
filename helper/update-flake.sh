@@ -60,8 +60,6 @@ echo "Updating main flake"
 if [[ $nixosVersion ]]; then
     setVersion 'nixpkgs.url = .*?nixos-' ../flake.nix
     setVersion 'system.stateVersion = "' ../examples/configuration.nix
-    setVersion 'nix-bitcoin.url = .*?/nixos-' ../examples/flakes/flake.nix
-    setVersion 'nix-bitcoin.url = .*?/nixos-' ../examples/container/flake.nix
     setVersion 'update-flake.sh ' ../dev/README.md
     nix flake update nixpkgs --flake ..
 else

@@ -10,16 +10,12 @@
   description = "A basic nix-bitcoin container node";
 
   inputs = {
-    nix-bitcoin.url = "github:fort-nix/nix-bitcoin/release";
-    # You can also use a version branch to track a specific NixOS release
-    # nix-bitcoin.url = "github:fort-nix/nix-bitcoin/nixos-26.05";
+    # Pin the latest release tag listed at https://github.com/bitcoinix/bitcoinix/tags
+    nix-bitcoin.url = "github:bitcoinix/bitcoinix/v0.1.0";
 
     nixpkgs.follows = "nix-bitcoin/nixpkgs";
     nixpkgs-unstable.follows = "nix-bitcoin/nixpkgs-unstable";
-    extra-container = {
-      url = "github:extra-container/extra-container/v0.17";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    extra-container.follows = "nix-bitcoin/extra-container";
   };
 
   outputs = { nixpkgs, nix-bitcoin, extra-container, ... }:

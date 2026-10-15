@@ -8,9 +8,8 @@
 {
   description = "A basic nix-bitcoin node";
 
-  inputs.nix-bitcoin.url = "github:fort-nix/nix-bitcoin/release";
-  # You can also use a version branch to track a specific NixOS release
-  # inputs.nix-bitcoin.url = "github:fort-nix/nix-bitcoin/nixos-26.05";
+  # Pin the latest release tag listed at https://github.com/bitcoinix/bitcoinix/tags
+  inputs.nix-bitcoin.url = "github:bitcoinix/bitcoinix/v0.1.0";
 
   inputs.nixpkgs.follows = "nix-bitcoin/nixpkgs";
   inputs.nixpkgs-unstable.follows = "nix-bitcoin/nixpkgs-unstable";

@@ -273,14 +273,6 @@ You can also build Nix from source by following the instructions at https://nixo
     additionally download the release archive into a throwaway Nix store and check that it is
     exactly the signed tree.
 
-    > [!WARNING]
-    > bitcoinix has not published its first release tag yet, so this command currently
-    > fails with "No release tags found", and step 3 has no tag to verify. Until then, point
-    > `nix-bitcoin-release.nix` at
-    > your bitcoinix checkout instead, as
-    > [examples/nix-bitcoin-release.nix](https://github.com/bitcoinix/bitcoinix/blob/master/examples/nix-bitcoin-release.nix)
-    > does.
-
 #### Optional: Specify the system of your node
 This enables evaluating your node config on a machine that has a different system platform
 than your node.\
