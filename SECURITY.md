@@ -67,6 +67,19 @@ the fingerprints below mirror it.
 The offline rotation key is listed like any other key, so it is also valid for release tags.
 Its private half is kept offline and used only to announce key changes.
 
+**prusnak** (GitHub: [prusnak](https://github.com/prusnak))
+
+| Purpose | Type | Fingerprint |
+| :-- | :-- | :-- |
+| Release tags (and commits) | `ssh-ed25519` | `SHA256:oLKvKy47vtNC8pxFbbC18h1xdP6zAzEeAyzdjN3jWZE` |
+
+Release tags are signed with this key only. This key is also listed at
+<https://github.com/prusnak.keys>.
+
+prusnak signs commits with this key or with the GPG key
+`86E6 792F C27B FD47 8860  C110 91F3 B339 B9A0 2A3D` (`0x91F3B339B9A02A3D`), published at
+<https://github.com/prusnak.gpg>. The GPG key is not valid for releases.
+
 Keys whose signatures must be rejected are listed in
 [`helper/release-keys/ssh-revoked-keys`](helper/release-keys/ssh-revoked-keys).
 

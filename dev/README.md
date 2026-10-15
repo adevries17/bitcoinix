@@ -170,5 +170,6 @@ Add a compromised key to `helper/release-keys/ssh-revoked-keys` instead (and kee
 `.github/CODEOWNERS` assigns the release-signing files (the key files, `fetch-release.sh`,
 `make-release.sh`, `release.yml` and `SECURITY.md`) to the maintainers. It
 only has an effect if a branch protection rule (or ruleset) on `master` requires review from
-code owners, which is a repository setting made in GitHub. With a single maintainer it cannot
-require a second reviewer; it starts to matter once there are several.
+code owners, which is a repository setting made in GitHub. Code owners need write access to
+the repository, otherwise GitHub ignores them. With two maintainers listed, a change by one
+of them needs the other's approval.

@@ -22,3 +22,7 @@ seberm@seberm.com namespaces="git" sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLW
 #
 # seberm <seberm@seberm.com>  offline rotation key, private half kept offline
 seberm@seberm.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM5o8JfQrLKlbvFyFi2m+MElnMQgICTuc3kKfK0Yx3kG
+#
+# prusnak <pavol@rusnak.io>  https://github.com/prusnak
+# Key as listed at https://github.com/prusnak.keys
+pavol@rusnak.io namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJUmoUquUzMn6uRgXFt0yFPbDLQUsZVsIbhTelP98EZj

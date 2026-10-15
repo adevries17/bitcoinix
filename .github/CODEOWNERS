@@ -4,9 +4,9 @@
 # This only takes effect with a branch protection rule (or ruleset) on master
 # that requires review from code owners. See "Cutting a release" in dev/README.md.
 
-/helper/release-keys/           @seberm
-/helper/fetch-release.sh        @seberm
-/helper/make-release.sh         @seberm
-/.github/workflows/release.yml  @seberm
-/.github/CODEOWNERS             @seberm
-/SECURITY.md                    @seberm
+/helper/release-keys/           @seberm @prusnak
+/helper/fetch-release.sh        @seberm @prusnak
+/helper/make-release.sh         @seberm @prusnak
+/.github/workflows/release.yml  @seberm @prusnak
+/.github/CODEOWNERS             @seberm @prusnak
+/SECURITY.md                    @seberm @prusnak
