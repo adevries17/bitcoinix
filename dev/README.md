@@ -102,3 +102,73 @@ It's easiest to use an existing service as a template:
 ## Switching to a new NixOS release
 - Run command `update-flake.sh 26.05`
 - Treewide: check if any `TODO-EXTERNAL` comments can be resolved
+
+## Cutting a release
+
+A release is a signed, annotated git tag and nothing else. There are no release archives
+and no GitHub release assets. Signing needs the maintainer's key, so this cannot run in CI.
+
+```bash
+helper/make-release.sh <version>    # e.g. 0.1.0, without the leading "v"
+git push origin v<version>          # manual, the script never pushes
+```
+
+One-time setup:
+
+```bash
+git config gpg.format ssh
+git config user.signingkey <path to your public key>
+```
+
+and your key must be listed in
+[`helper/release-keys/ssh-allowed-signers`](../helper/release-keys/ssh-allowed-signers).
+
+Before signing, the script checks that:
+- you are on `master`, with no uncommitted changes to tracked files, and `HEAD` equals
+  `origin/master`
+- tag `v<version>` exists neither locally nor on `origin`
+- `<version>` is a stable `X.Y.Z` that is greater than every existing release tag
+- `gpg.format` is `ssh`, `user.signingkey` is set and the allowed signers file exists
+
+It then creates the signed tag and verifies it with `helper/fetch-release.sh`, the same
+check users run, against your local repository. If verification fails, it deletes the
+tag it just created. Finally it prints the `git push` command, how to undo the tag
+before pushing, and the post-release checks. Pass `-y` to skip the confirmation prompt.
+
+After pushing, `checkDownload=1 releaseVersion=<version> helper/fetch-release.sh` run from a clean
+clone verifies the pushed tag and then downloads the archive that Nix users will get, into a
+throwaway store and cache so that nothing local can satisfy it. It fails unless the archive
+is exactly the signed tree. For a fork, also set `repoUrl=https://github.com/<owner>/<repo>`.
+
+Tag names must match `^v[0-9]+\.[0-9]+\.[0-9]+$`; `helper/fetch-release.sh` ignores anything else.
+Pre-releases such as `0.1.0-rc1` are not supported.
+
+The repository must not contain a `.gitattributes` file (at any depth). `fetch-release.sh`
+hashes the tree from `git archive`, and attributes such as `export-subst` can make that differ
+from the archive GitHub serves, so it refuses such a release.
+
+The verification step is the one that matters: it fails if the tag was signed with a key
+that is not listed in `ssh-allowed-signers`, which is the most likely way to publish an
+unverifiable release. `.github/workflows/release.yml` repeats it for the latest release tag,
+the one `fetch-release.sh` picks by default, on each tag push and daily, with
+`fetch-release.sh`, the key files and the flake lock taken from `master`, never from the tag.
+Older tags are not re-checked: release tags are protected, so they cannot change, and tags
+signed by a later revoked key would otherwise fail every run. A tag push runs the workflow file
+from the pushed tag, so only the daily (or a manual) run is a check that a malicious tag cannot
+alter. A failing daily run means the latest release no longer verifies, e.g. after its key
+was revoked: cut a new release signed by a valid key. The same workflow flags `v*` tags that
+are not `vX.Y.Z`.
+
+To add or retire a maintainer key, edit `helper/release-keys/ssh-allowed-signers` and
+`SECURITY.md` together; `test/release-keys-test.sh` fails if the two drift apart. Retire a
+key by appending `valid-before="YYYYMMDD"` to its line rather than deleting it, so that tags
+signed while it was still valid keep verifying. That is only safe for a key that is not
+compromised: `valid-before` is checked against the tag's own date, which the signer chooses.
+Add a compromised key to `helper/release-keys/ssh-revoked-keys` instead (and keep its line in
+`ssh-allowed-signers`); every tag it signed is then rejected. See SECURITY.md.
+
+`.github/CODEOWNERS` assigns the release-signing files (the key files, `fetch-release.sh`,
+`make-release.sh`, `release.yml` and `SECURITY.md`) to the maintainers. It
+only has an effect if a branch protection rule (or ruleset) on `master` requires review from
+code owners, which is a repository setting made in GitHub. With a single maintainer it cannot
+require a second reviewer; it starts to matter once there are several.
