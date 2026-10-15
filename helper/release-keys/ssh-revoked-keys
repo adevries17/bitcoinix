@@ -1,0 +1,14 @@
+# bitcoinix revoked release signing keys: one ssh public key per line
+# ("keytype keydata [comment]"), as read by `ssh-keygen -Y verify -r`.
+#
+# A key listed here is rejected for every tag it signed, whatever date the tag
+# claims. Use this for a COMPROMISED key. For a key that is only retired, append
+# valid-before="YYYYMMDD" to its line in ssh-allowed-signers instead: that check
+# uses the tag's own date, which the key holder chooses, so it does not stop a
+# compromised key. See SECURITY.md.
+#
+# Keep a revoked key's line in ssh-allowed-signers too; test/release-keys-test.sh
+# checks that every key here is also listed there.
+#
+# helper/fetch-release.sh refuses to run without this file, because git only warns
+# about a missing revocation file and then accepts the signature.
