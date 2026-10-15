@@ -15,10 +15,7 @@
 
     nixpkgs.follows = "nix-bitcoin/nixpkgs";
     nixpkgs-unstable.follows = "nix-bitcoin/nixpkgs-unstable";
-    extra-container = {
-      url = "github:extra-container/extra-container/v0.17";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    extra-container.follows = "nix-bitcoin/extra-container";
   };
 
   outputs = { nixpkgs, nix-bitcoin, extra-container, ... }:
