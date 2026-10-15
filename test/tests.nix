@@ -34,7 +34,12 @@ let
       tests.bitcoind = cfg.bitcoind.enable;
       services.bitcoind = {
         enable = true;
-        extraConfig = mkIf config.test.noConnections "connect=0";
+        extraConfig = mkMerge [
+          (mkIf config.test.noConnections "connect=0")
+          # Let bitcoind create a world-readable cookie, to test that the module
+          # still sets mode 640
+          "rpccookieperms=all"
+        ];
       };
 
       tests.clightning = cfg.clightning.enable;
