@@ -103,8 +103,9 @@ In a clone of this repository:
 ```bash
 git config gpg.ssh.allowedSignersFile helper/release-keys/ssh-allowed-signers
 git config gpg.ssh.revocationFile helper/release-keys/ssh-revoked-keys
-git tag -v v0.1.0
-git checkout v0.1.0
+git tag -l 'v*' --sort=-v:refname | head -1    # the latest release, e.g. v0.1.0
+git tag -v v<version>
+git checkout v<version>
 ```
 
 A good signature prints
