@@ -7,8 +7,10 @@ The easiest way to try out nix-bitcoin is to use one of the provided examples.
 If you use a Flakes-enabled version of Nix, run the following command to start a minimal
 nix-bitcoin QEMU VM:
 ```bash
-nix run github:fort-nix/nix-bitcoin/release
+nix run github:bitcoinix/bitcoinix/v<version>
 ```
+Replace `<version>` with the latest release tag listed at
+<https://github.com/bitcoinix/bitcoinix/tags>.\
 The VM (defined in [flake.nix](../flake.nix)) runs in the terminal and has `bitcoind`
 and `clightning` installed.\
 It leaves no traces (outside of `/nix/store`) on the host system.
