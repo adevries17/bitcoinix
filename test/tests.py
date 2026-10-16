@@ -189,46 +189,58 @@ def _():
     assert_str_matches(cert_alt_names, '20.0.0.1')
     assert_str_matches(cert_alt_names, 'example.com')
 
-@test("lnd-macaroon-read-deprivileged")
+@test("lnd-macaroons")
 def _():
-    # Regression test for the 2026-08-30 audit finding (modules/lnd.nix): the
-    # root ExecStartPost that mints custom macaroons must read admin.macaroon AS
-    # THE LND USER, never as root. admin.macaroon sits in lnd's own 0770 datadir,
-    # so a compromised lnd can replace it with a symlink to a root-only file; if
-    # root dereferences it, the bytes are exfiltrated to lnd via the REST call.
-    # Reading as the lnd user fails closed on such a symlink.
+    # Custom macaroons are created by a root script that operates in dirs that are
+    # writable by the lnd user.
+    # Test that the script doesn't follow symlinks placed there by the lnd user.
     assert_running("lnd")
-
-    # (a) Pin the deployed unit: the macaroon read must go through the run-as-lnd
-    #     wrapper. Reverting the fix to a bare root `xxd ... admin.macaroon`
-    #     makes this grep fail.
+    data = test_data["lnd-macaroons"]
+    name, user = next(iter(data["users"].items()))
+    macaroon = f"/run/lnd/{name}.macaroon"
+    admin_macaroon = f"{data['networkDir']}/admin.macaroon"
     script = succeed(
-        "systemctl show lnd -p ExecStartPost --value | "
-        "grep -oE '/nix/store/[a-z0-9]+-lnd-create-macaroons' | head -1"
+        "systemctl show lnd -p ExecStartPost --value"
+        " | grep -oE '/nix/store/[^ ]+-lnd-create-macaroons' | head -1"
     ).strip()
-    assert script, "lnd-create-macaroons ExecStartPost script not found"
-    assert_matches(
-        f"cat {script}",
-        r"runuser -u lnd [^\n]*xxd[^\n]*admin\.macaroon",
-    )
+    create_macaroons = f"RUNTIME_DIRECTORY=/run/lnd {script} 2>&1"
+    as_lnd = f"runuser -u {data['user']} --"
 
-    # (b) Prove the runtime asymmetry the fix relies on, in lnd's real datadir,
-    #     as the real lnd user, without disrupting the service. The canary sits
-    #     in a traversable dir (/run) but is root-only readable, mirroring the
-    #     real targets (backup passphrase, wg key, host keys).
+    def assert_macaroon_created():
+        assert_full_match(f"stat -c '%F %U %a' {macaroon}", f"regular file {user} 440\n")
+
+    canary = "/run/lnd-test-canary"
+    canary_dir = "/run/lnd-test-canary-dir"
+    succeed(f"install -m 600 <(echo canary) {canary}", f"mkdir -m 700 {canary_dir}")
+
+    def assert_canary_untouched():
+        assert_full_match(f"cat {canary}", "canary\n")
+        assert_full_match(f"stat -c '%U %a' {canary}", "root 600\n")
+        assert_full_match(f"ls -A {canary_dir}", "")
+
+    # Macaroon path is a symlink to a root-only file
+    succeed(f"{as_lnd} ln -sfn {canary} {macaroon}", create_macaroons)
+    assert_canary_untouched()
+    assert_macaroon_created()
+
+    # Macaroon path is a symlink to a root-only dir
+    succeed(f"{as_lnd} ln -sfn {canary_dir} {macaroon}", create_macaroons)
+    assert_canary_untouched()
+    assert_macaroon_created()
+
+    # Admin macaroon is a symlink to a root-only file.
+    # The file must not be read and sent to lnd.
     succeed(
-        "printf ROOT_ONLY_CANARY > /run/macaroon-canary",
-        "chown root:root /run/macaroon-canary",
-        "chmod 400 /run/macaroon-canary",
+        f"{as_lnd} mv {admin_macaroon} {admin_macaroon}.orig",
+        f"{as_lnd} ln -s {canary} {admin_macaroon}",
     )
-    link = "/var/lib/lnd/attack-test-link"
-    # The attacker is the lnd user, which owns its 0770 datadir.
-    succeed(f"runuser -u lnd -- ln -sf /run/macaroon-canary {link}")
-    # Root WOULD read the canary through the symlink (the exploit precondition).
-    assert_matches(f"cat {link}", "ROOT_ONLY_CANARY")
-    # The lnd user must NOT be able to — so the fix's read fails closed.
-    machine.fail(f"runuser -u lnd -- cat {link}")
-    succeed(f"rm -f {link} /run/macaroon-canary")
+    status, output = machine.execute(create_macaroons)
+    succeed(f"{as_lnd} mv -T {admin_macaroon}.orig {admin_macaroon}")
+    if status == 0 or "Permission denied" not in output:
+        raise Exception(f"Unexpected result when reading the admin macaroon: {status}, '{output}'")
+
+    succeed(f"rm -r {canary} {canary_dir}", create_macaroons)
+    assert_macaroon_created()
 
 @test("lndconnect-onion-lnd")
 def _():

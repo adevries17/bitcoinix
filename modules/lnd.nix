@@ -267,40 +267,36 @@ in {
           # Setting macaroon permissions for other users needs root permissions
           # The admin macaroon is passed to curl via a fd because argv is
           # world-readable through /proc/<pid>/cmdline
+          #
+          # This script runs as root, but the lnd data dir and $RUNTIME_DIRECTORY
+          # are writable by the lnd user, which could place symlinks there.
+          # So never read or write files as root via paths in these dirs:
+          # - Read the admin macaroon as the lnd user.
+          # - Create the macaroons in a root-only dir and move them to
+          #   $RUNTIME_DIRECTORY via rename (`mv -T`), which doesn't follow symlinks.
+          #   Renaming requires both dirs to be on the same filesystem (`/run`).
           script = nbLib.rootScript "lnd-create-macaroons" ''
+            tmpDir=$(mktemp -d /run/lnd-macaroons.XXXXXX)
+            trap 'rm -rf "$tmpDir"' EXIT
             umask ug=r,o=
-            # $RUNTIME_DIRECTORY (/run/lnd) is writable by the lnd service user,
-            # so this root script must never write/chmod/chown through a path the
-            # lnd process could tamper with (else a compromised lnd escalates to
-            # arbitrary root file overwrite/chown). Staging in $RUNTIME_DIRECTORY
-            # is NOT enough — lnd owns that directory and can unlink our temp file
-            # and swap in a symlink before we write to it. Stage instead in a
-            # ROOT-ONLY directory (mode 0700, owned by root, that lnd cannot enter
-            # or replace) on the SAME tmpfs as /run/lnd, so the final move is a
-            # rename(2): atomic, and it replaces the destination without following
-            # a symlink lnd may have planted there.
-            staging=$(${pkgs.coreutils}/bin/mktemp -d "/run/lnd-macaroons.XXXXXX")
-            trap '${pkgs.coreutils}/bin/rm -rf "$staging"' EXIT
             ${lib.concatMapStrings (macaroon: ''
               echo "Create custom macaroon ${macaroon}"
-              macaroonTmp="$staging/${macaroon}.macaroon"
-              # Read admin.macaroon AS the lnd user, never as root: it lives in
-              # lnd's own 0770 datadir, so a compromised lnd could plant a
-              # symlink there and have this root script dereference it to
-              # exfiltrate an arbitrary root-only file (backup passphrase, wg
-              # key, host keys) via the REST call below. Reading as the lnd user
-              # fails closed on such a symlink — lnd cannot read what lnd cannot
-              # read — and grants no access lnd does not already have. (The write
-              # path above is already symlink-hardened; this closes the read.)
-              adminMacaroonHex=$(${pkgs.util-linux}/bin/runuser -u ${cfg.user} -- ${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon')
+              tmpMacaroon="$tmpDir/${macaroon}.macaroon"
+              adminMacaroonHex=$(
+                ${pkgs.util-linux}/bin/runuser -u ${cfg.user} -- \
+                  ${pkgs.xxd}/bin/xxd -ps -u -c 99999 '${networkDir}/admin.macaroon'
+              )
+              # The response is controlled by lnd.
+              # Limit its size and fail if it contains no macaroon string.
               ${curl} \
                 -H @<(printf 'Grpc-Metadata-macaroon: %s\n' "$adminMacaroonHex") \
                 -X POST \
                 -d '{"permissions":[${cfg.macaroons.${macaroon}.permissions}]}' \
                 ${restUrl}/macaroon |\
-                ${pkgs.jq}/bin/jq -c '.macaroon' | ${pkgs.xxd}/bin/xxd -p -r > "$macaroonTmp"
-              chown ${cfg.macaroons.${macaroon}.user}: "$macaroonTmp"
-              ${pkgs.coreutils}/bin/mv -f "$macaroonTmp" "$RUNTIME_DIRECTORY/${macaroon}.macaroon"
+                head -c 65536 |\
+                ${pkgs.jq}/bin/jq -ce '.macaroon | strings | select(. != "")' | ${pkgs.xxd}/bin/xxd -p -r > "$tmpMacaroon"
+              chown ${cfg.macaroons.${macaroon}.user}: "$tmpMacaroon"
+              mv -fT "$tmpMacaroon" "$RUNTIME_DIRECTORY/${macaroon}.macaroon"
             '') (attrNames cfg.macaroons)}
           '';
         in [
