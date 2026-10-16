@@ -45,7 +45,7 @@
 
       overlays.default = final: prev: let
         nbPkgs = self.lib.mkNbPkgs { inherit (final) system; pkgs = final; };
-      in removeAttrs nbPkgs [ "pinned" "nixops19_09" "krops" ];
+      in removeAttrs nbPkgs [ "pinned" "krops" ];
 
       nixosModules.default = { config, pkgs, lib, ... }: {
         imports = [ ./modules/modules.nix ];
@@ -92,9 +92,7 @@
           "krops"
           "modulesPkgs"
           "netns-exec"
-          "nixops19_09"
           "pinned"
-          "generate-secrets"
           "nbPython3Packages"
         ]) // {
           inherit (import ./examples/qemu-vm/minimal-vm.nix self pkgs system)
