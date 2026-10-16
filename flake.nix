@@ -94,7 +94,6 @@
           "netns-exec"
           "nixops19_09"
           "pinned"
-          "generate-secrets"
           "nbPython3Packages"
         ]) // {
           inherit (import ./examples/qemu-vm/minimal-vm.nix self pkgs system)
