@@ -430,9 +430,20 @@ in {
         fi
       '';
 
-      # Enable RPC access for group
+      # Enable RPC access for group.
+      # Set the full mode instead of only adding group read, so the cookie is
+      # never readable by others, whatever mode bitcoind created it with
+      # (see bitcoind option `rpccookieperms`).
+      # The data dir is writable by the group, so refuse a cookie that was
+      # replaced by a symlink: chmod would follow it and change the mode of
+      # another bitcoind file (like a wallet).
       postStart = ''
-        chmod g=r '${cfg.dataDir}/${optionalString cfg.regtest "regtest/"}.cookie'
+        cookie='${cfg.dataDir}/${optionalString cfg.regtest "regtest/"}.cookie'
+        if [[ -L $cookie || ! -f $cookie ]]; then
+          echo "Error: RPC cookie '$cookie' is not a regular file" >&2
+          exit 1
+        fi
+        chmod 0640 "$cookie"
       '' + (optionalString cfg.regtest) ''
         chmod g=x '${cfg.dataDir}/regtest'
       '';
