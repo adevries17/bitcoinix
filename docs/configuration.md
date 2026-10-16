@@ -27,6 +27,19 @@ This fetches the latest release, verifies the signature on its release tag and u
 It refuses to switch to a release older than the one currently pinned. To downgrade on purpose,
 run `fetch-release.sh` with `releaseVersion=<version>` and write its output to `nix-bitcoin-release.nix`.
 
+### Upgrading to config version 0.1.1
+
+Liquid support has been removed, including the Elements daemon, liquid-swap, and
+BTCPay Server's LBTC integration. Remove `services.liquidd`,
+`services.btcpayserver.lbtc`, and any Liquid-specific onion service or network
+namespace settings from your configuration.
+
+Back up and migrate any existing Liquid wallets and data before upgrading.
+The backups service no longer includes the former Liquid data directory
+(default: `/var/lib/liquidd`) automatically. To keep backing it up, add its path to
+`services.backups.extraFiles`. After migrating your configuration, set
+`nix-bitcoin.configVersion = "0.1.1";`.
+
 # Customizing your configuration
 
 ## Get started with Nix

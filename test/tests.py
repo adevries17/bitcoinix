@@ -146,13 +146,6 @@ def _():
 def _():
     succeed("systemctl stop electrs")
 
-@test("liquidd")
-def _():
-    assert_running("liquidd")
-    machine.wait_until_succeeds("elements-cli getnetworkinfo")
-    assert_matches("runuser -u operator -- elements-cli getnetworkinfo | jq", '"version"')
-    succeed("runuser -u operator -- liquidswap-cli --help")
-
 @test("clightning")
 def _():
     assert_running("clightning")
@@ -258,8 +251,6 @@ def _():
 def _():
     assert_running("nbxplorer")
     machine.wait_until_succeeds(log_has_string("nbxplorer", "BTC: RPC connection successful"))
-    if test_data["btcpayserver-lbtc"]:
-        machine.wait_until_succeeds(log_has_string("nbxplorer", "LBTC: RPC connection successful"))
     wait_for_open_port(ip("nbxplorer"), 24444)
 
     assert_running("btcpayserver")
@@ -333,7 +324,7 @@ def _():
             )
 
     # These reachability tests are non-exhaustive
-    assert_reachable("bitcoind", ["clightning", "lnd", "liquidd"])
+    assert_reachable("bitcoind", ["clightning", "lnd"])
     assert_unreachable("bitcoind", ["btcpayserver", "rtl", "lightning-loop"])
     assert_unreachable("btcpayserver", ["bitcoind", "lightning-loop"])
 
