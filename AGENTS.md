@@ -50,7 +50,8 @@ sudo ./test/run-tests.sh container          # fast container; needs systemd + ro
 - `--copy-src` snapshots the source so edits during a run don't affect it.
 - CI (`.github/workflows/test.yml`, PRs + pushes to `master`) runs the `basic`
   scenarios, `nix flake check --all-systems`, `test/nixos-search/ci-test.sh`, and
-  shellcheck. Builds are cached in the `bitcoinix` Cachix cache.
+  shellcheck. Builds are cached in the `bitcoinix` Cachix cache. The rulesets on `master`
+  and release tags require the `ci_gate` job; add any new CI job to its `needs`.
 - `dev/` holds debugging helpers (`dev.sh`, `dev-features.sh`, `topics/`); see `dev/README.md`.
 
 ## Architecture

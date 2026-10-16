@@ -66,3 +66,28 @@ jobs:
         run: nix shell --inputs-from . nixpkgs#{git,openssh,gnutar} -c ./test/fetch-release-test.sh
       - name: Test make-release
         run: nix shell --inputs-from . nixpkgs#{git,openssh,gnutar} -c ./test/make-release-test.sh
+
+  # Job `ci_gate` is the status check that the rulesets on master and on release tags
+  # require. The matrix jobs report as `test_scenario (<scenario>)` when they run and as
+  # `test_scenario` when skipped, so no `test_scenario` check name can be required directly.
+  # Add new jobs to its `needs`.
+  ci_gate:
+    needs: [build_test_drivers, test_scenario, check_flake, release_tooling]
+    # Run even when a needed job failed, so that this check reports a failure instead of
+    # being skipped (a skipped required check counts as passed)
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          BUILD_TEST_DRIVERS: ${{ needs.build_test_drivers.result }}
+          TEST_SCENARIO: ${{ needs.test_scenario.result }}
+          CHECK_FLAKE: ${{ needs.check_flake.result }}
+          RELEASE_TOOLING: ${{ needs.release_tooling.result }}
+        run: |
+          echo "build_test_drivers: $BUILD_TEST_DRIVERS"
+          echo "test_scenario: $TEST_SCENARIO"
+          echo "check_flake: $CHECK_FLAKE"
+          echo "release_tooling: $RELEASE_TOOLING"
+          [[ $BUILD_TEST_DRIVERS == success && $CHECK_FLAKE == success && $RELEASE_TOOLING == success ]]
+          # `test_scenario` is skipped when all tests have already been built successfully
+          [[ $TEST_SCENARIO == success || $TEST_SCENARIO == skipped ]]
