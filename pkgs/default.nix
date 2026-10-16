@@ -34,9 +34,6 @@ let self = {
   netns-exec = pkgs.callPackage ./netns-exec { };
   krops = import ./krops { inherit pkgs; };
 
-  # Deprecated pkgs
-  nixops19_09 = pkgs.callPackage ./nixops { };
-
   pinned = import ./pinned.nix pkgs pkgsUnstable;
 
   modulesPkgs = self // self.pinned;

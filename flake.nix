@@ -45,7 +45,7 @@
 
       overlays.default = final: prev: let
         nbPkgs = self.lib.mkNbPkgs { inherit (final) system; pkgs = final; };
-      in removeAttrs nbPkgs [ "pinned" "nixops19_09" "krops" ];
+      in removeAttrs nbPkgs [ "pinned" "krops" ];
 
       nixosModules.default = { config, pkgs, lib, ... }: {
         imports = [ ./modules/modules.nix ];
@@ -92,7 +92,6 @@
           "krops"
           "modulesPkgs"
           "netns-exec"
-          "nixops19_09"
           "pinned"
           "nbPython3Packages"
         ]) // {
