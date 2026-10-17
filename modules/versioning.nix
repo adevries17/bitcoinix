@@ -159,11 +159,12 @@ let
         Liquid support, including the Elements daemon, liquid-swap and BTCPay Server's
         LBTC integration, has been removed.
 
-        Remove `services.liquidd`, `services.btcpayserver.lbtc` and any Liquid-specific
-        onion service or network namespace settings from your configuration.
-        Back up and migrate existing wallets and data before upgrading. The backups
-        service no longer includes the former Liquid data directory automatically;
-        use `services.backups.extraFiles` if you need to keep backing it up.
+        If you used Liquid, remove `services.liquidd`, `services.btcpayserver.lbtc` and
+        any Liquid-specific onion service or network namespace settings from your
+        configuration. Your Liquid wallets stay in the former data directory
+        (default: /var/lib/liquidd), but the backups service no longer includes it.
+        See docs/configuration.md, "Upgrading to config version 0.1.1", for how to keep
+        backing up and later access your wallets.
       '';
     }
   ];

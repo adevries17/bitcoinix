@@ -129,8 +129,10 @@ in {
   # 0.1.1
   [
     (mkRemovedOptionModule [ "services" "liquidd" ] ''
-      Liquid support has been removed from bitcoinix. Remove services.liquidd
-      from your configuration and manage any existing wallets and data separately.
+      Liquid support has been removed from bitcoinix. Remove services.liquidd and any
+      Liquid-specific onion service or network namespace settings from your configuration.
+      Your Liquid wallets are not deleted; see docs/configuration.md,
+      "Upgrading to config version 0.1.1".
     '')
     (mkRemovedOptionModule [ "services" "btcpayserver" "lbtc" ] ''
       Liquid support has been removed from bitcoinix. Remove services.btcpayserver.lbtc
