@@ -1,9 +1,11 @@
 { config, pkgs, lib, ... }:
 
-# Workflow for releasing a new nix-bitcoin version with incompatible changes:
-# Let V be the version of the upcoming, incompatible release.
+# Every change that breaks functionality from the user's point of view needs an
+# entry here (see "Breaking changes" in ../AGENTS.md).
+# Let V be the upcoming release.
 # 1. Add change descriptions with `version = V` at the end of the `changes` list below.
-# 2. Set `nix-bitcoin.configVersion = V` in ../examples/configuration.nix.
+# 2. Set `nix-bitcoin.configVersion = V` in ../examples/configuration.nix,
+#    unless it already is.
 
 with lib;
 let
