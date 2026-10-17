@@ -96,6 +96,11 @@ let
       };
 
       tests.lnd = cfg.lnd.enable;
+      tests.lnd-macaroons = cfg.lnd.enable && cfg.lnd.macaroons != {};
+      test.data.lnd-macaroons = {
+        inherit (cfg.lnd) networkDir user;
+        users = mapAttrs (_: macaroon: macaroon.user) cfg.lnd.macaroons;
+      };
       services.lnd = {
         port = 9736;
         certificate = {
