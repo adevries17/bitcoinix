@@ -137,15 +137,8 @@ let
       services.fulcrum.port = 50002;
       tests.fulcrum = cfg.fulcrum.enable;
 
-      tests.liquidd = cfg.liquidd.enable;
-      services.liquidd.extraConfig = mkIf config.test.noConnections "connect=0";
-
       tests.btcpayserver = cfg.btcpayserver.enable;
-      services.btcpayserver = {
-        lightningBackend = mkDefault "lnd";
-        lbtc = mkDefault true;
-      };
-      test.data.btcpayserver-lbtc = config.services.btcpayserver.lbtc;
+      services.btcpayserver.lightningBackend = mkDefault "lnd";
 
       tests.nodeinfo = config.nix-bitcoin.nodeinfo.enable;
 
@@ -220,7 +213,6 @@ let
       services.mempool.enable = true;
       services.electrs.enable = true;
       services.fulcrum.enable = true;
-      services.liquidd.enable = true;
       services.btcpayserver.enable = true;
       services.backups.enable = true;
 
@@ -262,7 +254,6 @@ let
       };
       test.features.clightningPlugins = true;
       services.clightning-rest.enable = true;
-      services.liquidd.enable = true;
       services.rtl.enable = true;
       services.mempool.enable = true;
       services.lnd.enable = true;
@@ -323,24 +314,6 @@ let
       services.lightning-pool.extraConfig = ''
         auctionserver=127.0.0.1
       '';
-
-      # `validatepegin` is incompatible with regtest
-      services.liquidd.validatepegin = mkForce false;
-
-      # TODO-EXTERNAL:
-      # Reenable `btcpayserver.lbtc` in regtest (and add test in tests.py)
-      # when nbxplorer can parse liquidd regtest blocks.
-      #
-      # When `btcpayserver.lbtc` is enabled in regtest, nxbplorer tries to
-      # generate regtest blocks, which fails because no liquidd wallet exists.
-      # When blocks are pre-generated via `liquidd.postStart`, nbxplorer
-      # fails to parse the blocks:
-      #   info: NBXplorer.Indexer.LBTC: Full node version detected: 210002
-      #   info: NBXplorer.Indexer.LBTC: NBXplorer is correctly whitelisted by the node
-      #     fail: NBXplorer.Indexer.LBTC: Unhandled exception in the indexer, retrying in 10 seconds
-      #       System.IO.EndOfStreamException: No more byte to read
-      #         at NBitcoin.BitcoinStream.ReadWriteBytes(Span`1 data)
-      services.btcpayserver.lbtc = mkForce false;
     };
 
     # Test the special bitcoin RPC setup that lnd uses when bitcoin is pruned

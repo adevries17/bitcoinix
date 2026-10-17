@@ -80,20 +80,6 @@ let
       '';
     }
     {
-      version = "0.0.57";
-      condition = config.nix-bitcoin ? secure-node-preset-enabled && config.services.liquidd.enable;
-      message = ''
-        The `secure-node.nix` preset does _not_ set `liquidd.prune = 1000` anymore.
-
-          - If you want to keep the same behavior as before, manually set
-            `services.liquidd.prune = 1000;` in your configuration.nix.
-          - Otherwise, if you want to turn off pruning, you must instruct liquidd
-            to reindex by setting `services.liquidd.extraConfig = "reindex=1";`.
-            This can be removed after having started liquidd with that option
-            once.
-      '';
-    }
-    {
       version = "0.0.65";
       condition = config.nix-bitcoin ? secure-node-preset-enabled &&
                   config.nix-bitcoin.secretsDir == "/etc/nix-bitcoin-secrets";
@@ -165,6 +151,20 @@ let
         listen address to 0.0.0.0, so the lnd/clnrest REST APIs now listen on localhost only.
         To connect over your LAN or VPN, set the address yourself. See docs/services.md,
         "Connecting without Tor or WireGuard".
+      '';
+    }
+    {
+      version = "0.1.1";
+      message = ''
+        Liquid support, including the Elements daemon, liquid-swap and BTCPay Server's
+        LBTC integration, has been removed.
+
+        If you used Liquid, remove `services.liquidd`, `services.btcpayserver.lbtc` and
+        any Liquid-specific onion service or network namespace settings from your
+        configuration. Your Liquid wallets stay in the former data directory
+        (default: /var/lib/liquidd), but the backups service no longer includes it.
+        See docs/configuration.md, "Upgrading to config version 0.1.1", for how to keep
+        backing up and later access your wallets.
       '';
     }
   ];
