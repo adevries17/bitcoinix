@@ -187,7 +187,14 @@ An old cookie can remain in the data directory after an unclean shutdown before
 the upgrade. Once the upgraded bitcoind is running, that old cookie is stale and
 can be removed. bitcoind creates a new cookie in `/run/bitcoind` each time it starts.
 
-After updating any affected clients, set `nix-bitcoin.configVersion = "0.1.2";`.
+The mempool backend now listens on `services.mempool.address` (default
+`127.0.0.1`) instead of all interfaces. With network namespace isolation enabled,
+it listens on its namespace address. Access through the nginx frontend is
+unchanged. If you access the backend API directly from another host, set
+`services.mempool.address` to the node's LAN or VPN address.
+
+After updating any affected clients and settings, set
+`nix-bitcoin.configVersion = "0.1.2";`.
 
 # Customizing your configuration
 
