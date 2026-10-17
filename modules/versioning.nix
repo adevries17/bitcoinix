@@ -167,6 +167,18 @@ let
         backing up and later access your wallets.
       '';
     }
+    {
+      version = "0.1.1";
+      condition = with config.services;
+        clightning-rest.enable && clightning-rest.address == "127.0.0.1"
+        && !(clightning-rest.extraConfig ? BIND);
+      message = ''
+        clightning-rest now listens on localhost only (`services.clightning-rest.address`
+        defaults to 127.0.0.1). It previously listened on all interfaces.
+        To connect over your LAN or VPN, set the address yourself. See docs/services.md,
+        "Connecting without Tor or WireGuard".
+      '';
+    }
   ];
 
   mkOnionServiceChange = service: {

@@ -347,6 +347,19 @@ def _():
         log_has_string("clightning-rest", "cl-rest api server is ready and listening")
     )
 
+@test("clightning-rest-local-bind")
+def _():
+    assert_running("clightning-rest")
+    machine.wait_until_succeeds(
+        log_has_string("clightning-rest", "cl-rest doc server is ready and listening")
+    )
+    # The REST and doc servers must listen on localhost only
+    for port in test_data["clightning-rest-local-bind"]:
+        wait_for_open_port("127.0.0.1", port)
+        assert_full_match(
+            f"ss -Htnl 'sport = :{port}' | awk '{{print $4}}' | sort -u", f"127.0.0.1:{port}\n"
+        )
+
 @test("mempool")
 def _():
     assert_running("mempool")
