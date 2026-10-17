@@ -9,6 +9,13 @@ Option namespaces and internal names stay `nix-bitcoin.*`; don't rename them to
 `bitcoinix` (breaks existing user configs). `docs/` is largely inherited from nix-bitcoin
 and is built with mdBook (`book.toml`; `docs/SUMMARY.md` lists the pages).
 
+## AI-assisted contributions
+
+Commits made with assistance from LLM-based AI tooling **must** include an
+`Assisted-by:` Git commit trailer naming at least the tool and the primary model
+name and version used for the contribution. A `Co-authored-by:` trailer does not
+satisfy this policy.
+
 ## Commands
 
 All work happens through the flake. Nix is required (flakes enabled).
