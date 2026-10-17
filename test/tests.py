@@ -194,24 +194,36 @@ def _():
     # Custom macaroons are created by a root script that operates in dirs that are
     # writable by the lnd user.
     # Test that the script doesn't follow symlinks placed there by the lnd user.
+    #
+    # Services like lightning-pool and btcpayserver read the live macaroons, so
+    # the test never touches them: the script writes to a test runtime dir, and
+    # for the admin macaroon it runs in a private mount namespace where a test dir
+    # is bind-mounted over the lnd network dir.
     assert_running("lnd")
     data = test_data["lnd-macaroons"]
     name, user = next(iter(data["users"].items()))
-    macaroon = f"/run/lnd/{name}.macaroon"
-    admin_macaroon = f"{data['networkDir']}/admin.macaroon"
+    as_lnd = f"runuser -u {data['user']} --"
+    runtime_dir = "/run/lnd-macaroons-test"
+    network_dir = "/run/lnd-macaroons-test-network"
+    macaroon = f"{runtime_dir}/{name}.macaroon"
     script = succeed(
         "systemctl show lnd -p ExecStartPost --value"
         " | grep -oE '/nix/store/[^ ]+-lnd-create-macaroons' | head -1"
     ).strip()
-    create_macaroons = f"RUNTIME_DIRECTORY=/run/lnd {script} 2>&1"
-    as_lnd = f"runuser -u {data['user']} --"
-
-    def assert_macaroon_created():
-        assert_full_match(f"stat -c '%F %U %a' {macaroon}", f"regular file {user} 440\n")
+    create_macaroons = f"RUNTIME_DIRECTORY={runtime_dir} {script} 2>&1"
+    live_macaroons = "stat -c '%n %i %Y' /run/lnd/*.macaroon"
 
     canary = "/run/lnd-test-canary"
     canary_dir = "/run/lnd-test-canary-dir"
-    succeed(f"install -m 600 <(echo canary) {canary}", f"mkdir -m 700 {canary_dir}")
+    succeed(
+        f"install -m 600 <(echo canary) {canary}",
+        f"mkdir -m 700 {canary_dir}",
+        f"install -d -m 750 -o {data['user']} {runtime_dir} {network_dir}",
+    )
+    live_before = succeed(live_macaroons)
+
+    def assert_macaroon_created():
+        assert_full_match(f"stat -c '%F %U %a' {macaroon}", f"regular file {user} 440\n")
 
     def assert_canary_untouched():
         assert_full_match(f"cat {canary}", "canary\n")
@@ -230,17 +242,19 @@ def _():
 
     # Admin macaroon is a symlink to a root-only file.
     # The file must not be read and sent to lnd.
-    succeed(
-        f"{as_lnd} mv {admin_macaroon} {admin_macaroon}.orig",
-        f"{as_lnd} ln -s {canary} {admin_macaroon}",
+    succeed(f"{as_lnd} ln -s {canary} {network_dir}/admin.macaroon")
+    status, output = machine.execute(
+        "unshare --mount --propagation private sh -c"
+        f" 'mount --bind {network_dir} {data['networkDir']} && {create_macaroons}'"
     )
-    status, output = machine.execute(create_macaroons)
-    succeed(f"{as_lnd} mv -T {admin_macaroon}.orig {admin_macaroon}")
-    if status == 0 or "Permission denied" not in output:
+    denied = f"{data['networkDir']}/admin.macaroon: Permission denied"
+    if status == 0 or denied not in output:
         raise Exception(f"Unexpected result when reading the admin macaroon: {status}, '{output}'")
+    assert_canary_untouched()
 
-    succeed(f"rm -r {canary} {canary_dir}", create_macaroons)
-    assert_macaroon_created()
+    # The live macaroons were never replaced
+    assert_full_match(live_macaroons, re.escape(live_before))
+    succeed(f"rm -r {canary} {canary_dir} {runtime_dir} {network_dir}")
 
 @test("lndconnect-onion-lnd")
 def _():
