@@ -193,6 +193,12 @@ it listens on its namespace address. Access through the nginx frontend is
 unchanged. If you access the backend API directly from another host, set
 `services.mempool.address` to the node's LAN or VPN address.
 
+The MariaDB server enabled by mempool now listens on `127.0.0.1` by default.
+Mempool itself uses MariaDB's Unix socket and needs no connection changes. If
+other clients access this database server over the network, explicitly set
+`services.mysql.settings.mysqld.bind-address` to the desired listen address.
+Existing explicit values of this option take precedence over the new default.
+
 After updating any affected clients and settings, set
 `nix-bitcoin.configVersion = "0.1.2";`.
 

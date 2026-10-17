@@ -644,6 +644,8 @@ def _():
         f"{netns}ss -ltnH 'sport = :8999' | awk '{{print $4}}'",
         re.escape(f"{ip('mempool')}:8999\n"),
     )
+    # MariaDB stays in the host namespace, including with netns isolation.
+    assert_full_match("ss -ltnH 'sport = :3306' | awk '{print $4}'", r"127\.0\.0\.1:3306\n")
 
 @test("nodeinfo")
 def _():
