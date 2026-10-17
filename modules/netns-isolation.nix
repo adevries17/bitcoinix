@@ -174,6 +174,10 @@ in {
 
         setupInNetns = ''
           ${ip} link set lo up
+          # The iptables rules below cover IPv4 only. Without this, the link
+          # gets an IPv6 link-local address and other netns can reach it over
+          # the bridge unfiltered.
+          echo 1 > /proc/sys/net/ipv6/conf/${veth}/disable_ipv6
           ${ip} addr add ${v.address}/24 dev ${veth}
           ${ip} link set ${veth} up
           ${ip} route add default via ${bridgeIp}

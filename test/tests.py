@@ -408,6 +408,13 @@ def _():
     assert_unreachable("bitcoind", ["btcpayserver", "rtl", "lightning-loop"])
     assert_unreachable("btcpayserver", ["bitcoind", "lightning-loop"])
 
+    # The netns firewall rules are IPv4 only, so the veth inside a netns must
+    # have no IPv6 address. Otherwise it is reachable over link-local IPv6
+    # from every other netns on the bridge.
+    for service in enabled_tests.intersection(test_data["netns"]):
+        veth = f"nb-veth-{test_data['netns'][service]['id']}"
+        assert_full_match(f"ip netns exec nb-{service} ip -6 addr show dev {veth}", "")
+
     # netns addresses can not be bound to in the main netns.
     # This prevents processes in the main netns from impersonating nix-bitcoin services.
     assert_matches(
