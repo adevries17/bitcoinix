@@ -109,12 +109,12 @@ in {
       }
       {
         # The REST APIs below are bound to 0.0.0.0 and are protected only by the
-        # `extraCommands` rules, which exist only when the NixOS firewall is enabled.
-        # (The nftables backend needs no check here: NixOS already rejects a
-        # non-empty `extraCommands` under nftables.)
-        assertion = !(lndconnect || lnconnect-clnrest || lndconnect-clightning)
-                    || config.networking.firewall.enable;
-        message = "`nix-bitcoin.wireguard` binds the REST API of the enabled `*connect` helpers to 0.0.0.0 and protects it only by the firewall. Enable `networking.firewall`.";
+        # `extraCommands` rules, which also enforce `restrictPeer`. `extraCommands`
+        # run only with the iptables backend: NixOS rejects a non-empty
+        # `extraCommands` under nftables, and firewalld silently ignores them.
+        assertion = !(lndconnect || lnconnect-clnrest || lndconnect-clightning || cfg.restrictPeer)
+                    || (config.networking.firewall.enable && config.networking.firewall.backend == "iptables");
+        message = "`nix-bitcoin.wireguard` protects the REST API of the enabled `*connect` helpers (bound to 0.0.0.0) and enforces `restrictPeer` only through `networking.firewall.extraCommands`, which run only with the iptables backend. Enable `networking.firewall` and disable `networking.nftables` and `services.firewalld`, so that the firewall defaults to the iptables backend.";
       }
     ];
 
@@ -193,9 +193,11 @@ in {
         + optionalString lndconnect-clightning ''
           iptables -w -A nixos-fw -i wg-nb -p tcp -s ${wgSubnet}.0/24 -d ${serverAddress} --dport ${toString clightning-rest.port} -j nixos-fw-accept
         ''
+        # Insert first: NixOS fills `nixos-fw` with its ACCEPT rules (`allowedTCPPorts`) before `extraCommands`.
+        # The rule only matches peer traffic not sent to `serverAddress`, so tunnel flows still pass.
         + optionalString cfg.restrictPeer ''
-          iptables -w -A nixos-fw ${restrictPeerRule}
-          iptables -w -A FORWARD ${restrictPeerRule}
+          iptables -w -I nixos-fw 1 ${restrictPeerRule}
+          iptables -w -I FORWARD 1 ${restrictPeerRule}
         '';
 
       extraStopCommands =
