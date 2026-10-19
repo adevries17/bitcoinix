@@ -9,7 +9,6 @@ pkgs: pkgsUnstable:
     clightning
     electrs
     extra-container
-    lightning-pool
     lndconnect
     lndinit
     nbxplorer;
@@ -18,7 +17,6 @@ pkgs: pkgsUnstable:
     bitcoind-knots
     clboss
     fulcrum
-    lightning-loop
     lnd;
 
   inherit pkgs pkgsUnstable;

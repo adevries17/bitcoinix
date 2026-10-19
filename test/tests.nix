@@ -83,7 +83,6 @@ let
         nodes = {
           lnd = {
             enable = mkDefault true;
-            loop = mkDefault true;
             extraConfig.Settings.userPersona = "MERCHANT";
           };
           clightning.enable = mkDefault true;
@@ -140,11 +139,6 @@ let
       tests.clightning-rest-local-bind =
         cfg.clightning-rest.enable && !config.nix-bitcoin.netns-isolation.enable;
       test.data.clightning-rest-local-bind = with cfg.clightning-rest; [ port docPort ];
-
-      tests.lightning-loop = cfg.lightning-loop.enable;
-      services.lightning-loop.certificate.extraIPs = [ "20.0.0.1" ];
-
-      tests.lightning-pool = cfg.lightning-pool.enable;
 
       tests.charge-lnd = cfg.charge-lnd.enable;
 
@@ -223,8 +217,6 @@ let
       services.clightning-rest.lndconnect = { enable = true; onion = true; };
       services.lnd.enable = true;
       services.lnd.lndconnect = { enable = true; onion = true; };
-      services.lightning-loop.enable = true;
-      services.lightning-pool.enable = true;
       services.charge-lnd.enable = true;
       services.mempool.enable = true;
       services.electrs.enable = true;
@@ -274,8 +266,6 @@ let
       services.mempool.enable = true;
       services.lnd.enable = true;
       services.lnd.lndconnect.enable = true;
-      services.lightning-loop.enable = true;
-      services.lightning-pool.enable = true;
       services.charge-lnd.enable = true;
       services.electrs.enable = true;
       services.fulcrum.enable = true;
@@ -313,18 +303,6 @@ let
           address=$($cli -rpcwallet=test getnewaddress)
           "$cli" generatetoaddress ${toString config.test.data.num_blocks} "$address"
         fi
-      '';
-
-      # lightning-loop contains no builtin swap server for regtest.
-      # Add a dummy definition.
-      services.lightning-loop.extraConfig = ''
-        server.host=127.0.0.1
-      '';
-
-      # lightning-pool contains no builtin auction server for regtest.
-      # Add a dummy definition
-      services.lightning-pool.extraConfig = ''
-        auctionserver=127.0.0.1
       '';
     };
 

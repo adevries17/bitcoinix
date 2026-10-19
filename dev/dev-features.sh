@@ -171,12 +171,6 @@ c journalctl -u lnd
 c lncli getinfo
 
 #―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-# lightning-loop
-run-tests.sh -s lightning-loop container
-c systemctl status lightning-loop
-c journalctl -u lightning-loop
-
-#―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 # btcpayserver
 # https://docs.btcpayserver.org/Development/GreenFieldExample/
 

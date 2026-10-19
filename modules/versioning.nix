@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, options, pkgs, lib, ... }:
 
 # Every change that breaks functionality from the user's point of view needs an
 # entry here (see "Breaking changes" in ../AGENTS.md).
@@ -9,7 +9,7 @@
 
 with lib;
 let
-  options = {
+  versioningOptions = {
     nix-bitcoin.configVersion = mkOption {
       type = with types; nullOr str;
       default = null;
@@ -189,6 +189,33 @@ let
         since joinmarket was removed, so it rejected every namespace.
         To run a command in a service namespace, use `sudo ip netns exec nb-<service> <command>`.
         Remove `nix-bitcoin.netns-isolation.allowedUser` from your configuration if you set it.
+        '';
+    }
+    {
+      version = "0.1.1";
+      condition = options.services.lightning-pool.isDefined;
+      message = ''
+        Lightning Pool support has been removed. Remove `services.lightning-pool`
+        and any Pool-specific onion service or network namespace settings from your
+        configuration. Manage Pool separately if needed. Existing data is retained;
+        see docs/configuration.md, "Upgrading to config version 0.1.1".
+      '';
+    }
+    {
+      version = "0.1.1";
+      condition = options.services.lightning-loop.isDefined
+        || options.services.rtl.nodes.lnd.loop.isDefined;
+      message = ''
+        Lightning Loop support and RTL's Loop integration have been removed.
+
+        Before switching, make sure no Loop swap is in progress (`loop listswaps`);
+        a Loop Out whose preimage was already revealed can lose the swap amount
+        once `loopd` stops.
+
+        Remove `services.lightning-loop`, `services.rtl.nodes.lnd.loop` and any
+        Loop-specific onion service or network namespace settings from your
+        configuration. Manage Loop separately if needed. Existing data is retained;
+        see docs/configuration.md, "Upgrading to config version 0.1.1".
       '';
     }
   ];
@@ -231,7 +258,7 @@ in
     ./obsolete-options.nix
   ];
 
-  inherit options;
+  options = versioningOptions;
 
   config = {
     # Force evaluation. An actual option value is never assigned
