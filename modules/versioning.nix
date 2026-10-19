@@ -157,6 +157,8 @@ let
     }
     {
       version = "0.1.1";
+      condition = options.services.liquidd.isDefined
+        || options.services.btcpayserver.lbtc.isDefined;
       message = ''
         Liquid support, including the Elements daemon, liquid-swap and BTCPay Server's
         LBTC integration, has been removed.
