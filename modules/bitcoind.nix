@@ -424,10 +424,9 @@ in {
             echo "externalip=$(${cfg.getPublicAddressCmd})"
           ''}
         )
-        confFile='${cfg.dataDir}/bitcoin.conf'
-        if [[ ! -e $confFile || $cfg != $(cat $confFile) ]]; then
-          install -o '${cfg.user}' -g '${cfg.group}' -m 640 <(echo "$cfg") $confFile
-        fi
+        # Always replace the file. The data dir is writable by the operator, which
+        # could plant an operator-owned file with identical content to skip the update.
+        install -o '${cfg.user}' -g '${cfg.group}' -m 640 <(echo "$cfg") '${cfg.dataDir}/bitcoin.conf'
       '';
 
       # Enable RPC access for group.
