@@ -640,6 +640,38 @@ def _():
     # Sanity-check system by restarting bitcoind.
     succeed("systemctl restart bitcoind")
 
+# Impure: restarts services
+@test("config-replace")
+def _():
+    # Services write their config at start, and the data dirs are writable by
+    # the operator (bitcoind, clightning) or the service user (lnd).
+    # Test that a symlink or file planted in place of the config is replaced
+    # by a regular file owned by the service user, and that the planted
+    # target is never written to.
+    for data in test_data["config-replace"]:
+        unit, file, user, planter = data["unit"], data["file"], data["user"], data["planter"]
+        with machine.nested(f"config file: {file}"):
+            # The unit might still be restarting after the preceding 'restart-bitcoind' test
+            succeed(f"systemctl start {unit}")
+            orig = f"{file}.orig"
+            # The target must be inside the data dir, which is the only path the
+            # service can write (ProtectSystem, ProtectHome, PrivateTmp)
+            target = f"{os.path.dirname(file)}/config-replace-target"
+            # The content equals the original config, which also covers services
+            # that skip the update when the content is unchanged
+            succeed(
+                f"cat {file} > {target}",
+                f"chown {planter} {target}",
+                f"chmod 666 {target}",
+                f"runuser -u {planter} -- sh -c 'mv {file} {orig} && ln -s {target} {file}'",
+            )
+            before = succeed(f"cat {target}")
+            succeed(f"systemctl restart {unit}")
+            machine.wait_for_unit(unit)
+            assert_full_match(f"stat -c '%U %F' {file}", f"{user} regular file\n")
+            assert_full_match(f"cat {target}", re.escape(before))
+            succeed(f"rm {orig} {target}")
+
 @test("regtest")
 def _():
     def enabled(unit):

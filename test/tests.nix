@@ -144,6 +144,30 @@ let
         cfg.clightning-rest.enable && !config.nix-bitcoin.netns-isolation.enable;
       test.data.clightning-rest-local-bind = with cfg.clightning-rest; [ port docPort ];
 
+      # Config files in data dirs that are writable by a user other than the service user.
+      # `planter` is the user that plants the replacement file.
+      tests.config-replace = config.test.data.config-replace != [];
+      test.data.config-replace =
+        optional cfg.bitcoind.enable {
+          unit = "bitcoind";
+          file = "${cfg.bitcoind.dataDir}/bitcoin.conf";
+          inherit (cfg.bitcoind) user;
+          planter = config.nix-bitcoin.operator.name;
+        }
+        ++ optional cfg.clightning.enable {
+          unit = "clightning";
+          file = "${cfg.clightning.dataDir}/config";
+          inherit (cfg.clightning) user;
+          planter = config.nix-bitcoin.operator.name;
+        }
+        # The operator can run as lnd, so lnd plants the file itself
+        ++ optional cfg.lnd.enable {
+          unit = "lnd";
+          file = "${cfg.lnd.dataDir}/lnd.conf";
+          inherit (cfg.lnd) user;
+          planter = cfg.lnd.user;
+        };
+
       tests.charge-lnd = cfg.charge-lnd.enable;
 
       tests.electrs = cfg.electrs.enable;
