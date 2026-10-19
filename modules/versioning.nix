@@ -126,7 +126,7 @@ let
     }
     {
       version = "0.0.70";
-      condition = config.services.lnd.lndconnectOnion.enable;
+      condition = options.services.lnd.lndconnectOnion.isDefined;
       message = ''
         The `lndconnect-rest-onion` binary has been renamed to `lndconnect`.
       '';
