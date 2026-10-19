@@ -11,6 +11,29 @@ This directory contains docs and helper scripts for developing and debugging:
 
 See also: [test/README.md](../test/README.md)
 
+## Pull request labels
+
+The [labeler workflow](../.github/workflows/labeler.yml) automatically adds area labels
+when pull requests are opened, updated or reopened. A single `github-script` step
+applies the path rules defined in the workflow and adds `type: feature` for added
+definition files and `type: removal` for deleted ones (`modules/**/*.nix` and
+`pkgs/**/*.nix`). Both type labels can apply to the same PR. Edits to existing
+files and file renames do not trigger these type labels. Labels are only added, so
+previously applied labels remain.
+Other type labels, status and breaking labels are applied manually.
+
+To edit area labels, change the `areaRules` lists near the top of the workflow.
+Each label can have `directories` (recursive, with a trailing `/`), `files` (exact
+paths from the repository root), `names` (filenames at any depth, such as
+`README.md`), and `patterns` (globs such as `helper/update-flake.*`). Matching any
+entry applies the label; multiple area labels can apply to the same file.
+For example, add `'helper/'` to a label's `directories` list to include all helper
+scripts, or add `'helper/make-release.sh'` to its `files` list to include just that
+script. Keep label names aligned with the
+[repository labels](https://github.com/bitcoinix/bitcoinix/labels).
+Use `directories` and `names` for recursive matching that includes hidden files;
+`patterns` uses Node's `path.matchesGlob`, whose wildcards skip hidden names.
+
 ## Run a dev shell
 
 There are two ways to run a dev shell:
