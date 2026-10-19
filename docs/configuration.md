@@ -58,6 +58,11 @@ the data directory. Earlier versions, including the `elementsd` package in
 nixpkgs 26.05, lack the fix for that bug.
 Delete the files above once you no longer need them.
 
+The `netns-exec` wrapper has been removed. Its namespace allowlist had been empty
+since joinmarket was removed, so it rejected every namespace. To run a command in a
+service network namespace, use `sudo ip netns exec nb-<service> <command>`.
+If you set `nix-bitcoin.netns-isolation.allowedUser`, remove it from your configuration.
+
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
 # Customizing your configuration

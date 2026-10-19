@@ -87,13 +87,6 @@ let self = {
   # Used for ExecStart*
   rootScript = name: src: "+${self.script name src}";
 
-  cliExec = mkOption {
-    # Used by netns-isolation to execute the cli in the service's private netns
-    internal = true;
-    type = types.str;
-    default = "exec";
-  };
-
   mkOnionService = map: {
     map = [ map ];
     version = 3;

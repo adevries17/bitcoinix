@@ -91,7 +91,6 @@
           "fetchNodeModules"
           "krops"
           "modulesPkgs"
-          "netns-exec"
           "pinned"
           "nbPython3Packages"
         ]) // {
