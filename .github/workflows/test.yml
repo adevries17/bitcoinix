@@ -46,6 +46,7 @@ jobs:
           - default
           - netns
           - netnsRegtest
+          - wireguard-lndconnect
     needs: build_test_drivers
     if: needs.build_test_drivers.outputs.run_scenario_tests == 'true'
     steps:
