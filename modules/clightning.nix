@@ -164,14 +164,17 @@ in {
         # This will no longer be needed when clightning supports systemd startup notifications.
         rm -f '${cfg.networkDir}/lightning-rpc'
 
-        umask u=rw,g=r,o=
-        {
+        # Build the whole config first, then replace the file in one step.
+        # The data dir is writable by the operator, so a redirect into `config`
+        # could follow a symlink or reuse a file owned by the operator.
+        conf=$(
           cat '${configFile}'
           echo "bitcoin-rpcpassword=$(cat '${config.nix-bitcoin.secretsDir}/bitcoin-rpcpassword-public')"
           ${optionalString (cfg.getPublicAddressCmd != "") ''
             echo "announce-addr=$(${cfg.getPublicAddressCmd}):${toString publicPort}"
           ''}
-        } > '${cfg.dataDir}/config'
+        )
+        install -m 640 <(echo "$conf") '${cfg.dataDir}/config'
       '';
       serviceConfig = nbLib.defaultHardening // {
         ExecStart = "${cfg.package}/bin/lightningd --lightning-dir=\"${cfg.dataDir}\"";
