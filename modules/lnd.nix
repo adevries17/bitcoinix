@@ -228,13 +228,14 @@ in {
       requires = [ "bitcoind.service" ];
       after = [ "bitcoind.service" "nix-bitcoin-secrets.target" ];
       preStart = ''
-        install -m600 ${configFile} '${cfg.dataDir}/lnd.conf'
-        {
+        conf=$(
+          cat ${configFile}
           echo "bitcoind.rpcpass=$(cat ${secretsDir}/bitcoin-rpcpassword-public)"
           ${optionalString (cfg.getPublicAddressCmd != "") ''
             echo "externalip=$(${cfg.getPublicAddressCmd})"
           ''}
-        } >> '${cfg.dataDir}/lnd.conf'
+        )
+        install -m600 <(echo "$conf") '${cfg.dataDir}/lnd.conf'
 
         if [[ ! -f ${networkDir}/wallet.db ]]; then
           seed='${cfg.dataDir}/lnd-seed-mnemonic'
