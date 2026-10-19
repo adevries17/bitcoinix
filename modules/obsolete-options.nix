@@ -138,6 +138,11 @@ in {
       Liquid support has been removed from bitcoinix. Remove services.btcpayserver.lbtc
       from your configuration. BTCPay Server now supports Bitcoin and Lightning only.
     '')
+    (mkRemovedOptionModule [ "nix-bitcoin" "netns-isolation" "allowedUser" ] ''
+      The netns-exec wrapper has been removed, so there is no user to authorize.
+      Remove nix-bitcoin.netns-isolation.allowedUser from your configuration.
+      To run a command in a service namespace, use `sudo ip netns exec nb-<service> <command>`.
+    '')
   ];
 
   config = {

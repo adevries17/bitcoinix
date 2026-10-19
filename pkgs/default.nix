@@ -30,7 +30,6 @@ let self = {
   fetchNodeModules = pkgs.callPackage ./build-support/fetch-node-modules.nix { };
 
   # Internal pkgs
-  netns-exec = pkgs.callPackage ./netns-exec { };
   krops = import ./krops { inherit pkgs; };
 
   pinned = import ./pinned.nix pkgs pkgsUnstable;

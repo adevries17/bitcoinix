@@ -33,14 +33,6 @@ let
       });
     };
 
-    allowedUser = mkOption {
-      type = types.str;
-      description = ''
-        User that is allowed to execute commands in the service network namespaces.
-      '';
-      default = config.nix-bitcoin.operator.name;
-    };
-
     netns = mkOption {
       readOnly = true;
       default = netns;
@@ -114,16 +106,6 @@ in {
       config.services.i2pd.proto.sam.port
     ];
     boot.kernel.sysctl."net.ipv4.ip_forward" = true;
-
-    security.wrappers.netns-exec = {
-      source = config.nix-bitcoin.pkgs.netns-exec;
-      capabilities = "cap_sys_admin=ep";
-      owner = cfg.allowedUser;
-      # Don't authorize the group of `owner`. For normal users, this group is
-      # `users`, which is shared by all normal users.
-      group = "root";
-      permissions = "500";
-    };
 
     systemd.services = {
       # Due to a NixOS bug we can't currently use option `networking.bridges` to
