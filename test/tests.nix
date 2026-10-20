@@ -29,6 +29,8 @@ let
         (mkIfTest "btcpayserver" [ openssl xxd ])
         # Needed to test certificate creation
         (mkIfTest "lnd" [ openssl ])
+        # Needed to authenticate with charge-lnd's macaroon
+        (mkIfTest "charge-lnd" [ curl xxd ])
         # Needed to trace the commands run by secret generation
         (mkIfTest "secrets-no-argv" [ strace ])
       ]);

@@ -3,6 +3,7 @@ import hmac
 import json
 import os
 import re
+import shlex
 
 def succeed(*cmds):
     """Returns the concatenated output of all cmds"""
@@ -430,6 +431,51 @@ def _():
     # charge-lnd is a oneshot service that is started by a timer under regular operation
     succeed("systemctl start charge-lnd")
     assert_no_failure("charge-lnd")
+
+    def request(method, path, *, user="charge-lnd",
+                macaroon="/run/lnd/charge-lnd.macaroon", input_cmd="printf '{}'"):
+        # Stream bodies and headers so neither macaroon appears in process arguments.
+        cmd = (
+            "curl -sS --max-time 30 --cacert /secrets/lnd-cert "
+            "-H @<(printf 'Grpc-Metadata-macaroon: %s\\n' "
+            f'"$(xxd -ps -c 99999 {shlex.quote(macaroon)})") '
+            f"-X {method} --data-binary @- "
+            f"https://{ip('lnd')}:8080{path}"
+        )
+        return json.loads(succeed(
+            f"{input_cmd} | runuser -u {shlex.quote(user)} -- bash -c {shlex.quote(cmd)}"
+        ))
+
+    # Check the policy RPC grants without requiring open channels. The admin
+    # authenticates this check; the charge-lnd macaroon is the one being checked.
+    lnd = test_data["lnd-macaroons"]
+    for rpc in [
+        "/lnrpc.Lightning/UpdateChannelPolicy",
+        "/routerrpc.Router/UpdateChanStatus",
+    ]:
+        response = request(
+            "POST", "/v1/macaroon/checkpermissions",
+            user=lnd["user"], macaroon=f"{lnd['networkDir']}/admin.macaroon",
+            input_cmd=(
+                "runuser -u charge-lnd -- base64 -w0 /run/lnd/charge-lnd.macaroon | "
+                f"jq -Rs --arg rpc {shlex.quote(rpc)} "
+                "'{macaroon: ., fullMethod: $rpc, check_default_perms_from_full_method: true}'"
+            ),
+        )
+        assert response.get("valid") is True, (rpc, response)
+
+    # These requests must fail authorization, rather than just fail because the
+    # wallet is empty, a payment is invalid, or a channel does not exist.
+    for method, path in [
+        ("POST", "/v2/router/send"),
+        ("POST", "/v2/router/route/send"),
+        ("DELETE", f"/v1/channels/{'00' * 32}/0"),
+        ("DELETE", f"/v1/channels/abandon/{'00' * 32}/0"),
+    ]:
+        response = request(method, path)
+        # Streaming RPCs wrap their errors in an extra object.
+        error = response.get("error", response)
+        assert error["message"] == "permission denied", (path, response)
 
 @test("btcpayserver")
 def _():
