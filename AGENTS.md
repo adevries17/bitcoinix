@@ -105,8 +105,8 @@ when they update. A release note alone is not enough. This includes:
 
 - a removed or renamed option, or a removed module/service (also add a
   `mkRemovedOptionModule`, see "Removing a service")
-- a changed default that changes behaviour, e.g. a listen address (the 0.1.1
-  clightning-rest entry)
+- a changed default that changes behaviour, e.g. a listen address (the 0.1.0
+  lndconnect entry)
 - required manual action or downtime: a database/index reindex or resync (the electrs
   entries), a data migration
 - data no longer covered by a service, e.g. backups (the 0.1.1 Liquid entry)

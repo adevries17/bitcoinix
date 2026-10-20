@@ -146,7 +146,6 @@ in {
         inherit name cfg;
         systemdServiceName = "clightning";
       };
-      clightning-rest = mkInfo "";
       electrs = mkInfo "";
       fulcrum = mkInfo "";
       btcpayserver = mkInfo "";

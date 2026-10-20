@@ -72,40 +72,6 @@ let
       };
     };
 
-    services.clightning-rest.lndconnect = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-        Add a `lndconnect-clightning` binary to the system environment which prints
-        connection info for Core Lightning clients.
-        See: https://github.com/LN-Zap/lndconnect
-
-        Usage:
-        ```bash
-          # Print QR code
-          lndconnect-clightning
-
-          # Print URL
-          lndconnect-clightning --url
-        ```
-
-        This does not change the listen address of the clightning-rest server
-        (`services.clightning-rest.address`), which is localhost by default.
-        To connect a client, enable `services.clightning-rest.lndconnect.onion`,
-        use the WireGuard preset, or set the address yourself.
-      '';
-      };
-      onion = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Create an onion service for the Core Lightning REST server,
-          which is used by lndconnect.
-        '';
-      };
-    };
-
     nix-bitcoin.mkLndconnect = mkOption {
       readOnly = true;
       default = mkLndconnect;
@@ -121,15 +87,13 @@ let
 
   inherit (config.services)
     lnd
-    clightning
-    clightning-rest;
+    clightning;
 
   inherit (clightning.plugins) clnrest;
 
   mkLndconnect = {
     name,
     shebang ? "#!${pkgs.stdenv.shell} -e",
-    isClightning ? false,
     isClnrest ? false,
     port,
     authSecretPath,
@@ -151,25 +115,12 @@ let
         --configfile=/dev/null "$@"
     )
 
-    ${optionalString isClightning
-      # - Change URL protocol to c-lightning-rest
-      # - Encode macaroon as hex (in uppercase) instead of base 64.
-      #   Because `macaroon` is always the last URL fragment, the
-      #   Bash substitution below works correctly.
-      ''
-        macaroonHex=$(${getExe pkgs.xxd} -p -u -c 99999 '${authSecretPath}')
-        # Bash substitution, not sed: a sed program is an argv element and is
-        # readable by every local user through /proc/<pid>/cmdline while it runs.
-        url=''${url/#lndconnect/c-lightning-rest}
-        url=''${url/macaroon=*/macaroon=$macaroonHex}
-      ''
-    }
-
     ${optionalString isClnrest
-      # Change URL protocol to clnrest
+      # Change URL protocol to clnrest and replace the macaroon with a rune.
       ''
         rune=$(cat '${authSecretPath}')
-        # Bash substitution, not sed; see the clightning-rest branch above.
+        # Bash substitution keeps the rune out of process arguments, which
+        # every local user can read through /proc/<pid>/cmdline.
         url=''${url/#lndconnect/clnrest}
         url=''${url/macaroon=*/rune=$rune}
       ''
@@ -254,39 +205,6 @@ in {
           };
           # This also allows nodeinfo to show the clnrest onion address
           nix-bitcoin.onionAddresses.access.${operatorName} = [ "clnrest" ];
-        })
-      ])
-    )
-
-    (mkIf (clightning-rest.enable && clightning-rest.lndconnect.enable)
-      (mkMerge [
-        {
-          environment.systemPackages = [(
-            mkLndconnect {
-              name = "lndconnect-clightning";
-              isClightning = true;
-              enableOnion = clightning-rest.lndconnect.onion;
-              onionService = "${operatorName}/clightning-rest";
-              port = clightning-rest.port;
-              certPath = "${clightning-rest.dataDir}/certs/certificate.pem";
-              authSecretPath = "${clightning-rest.dataDir}/certs/access.macaroon";
-            }
-          )];
-
-          # Don't change `clightning-rest.address`. Exposing the REST API must be an explicit choice.
-        }
-
-        (mkIf clightning-rest.lndconnect.onion {
-          services.tor = {
-            enable = true;
-            relay.onionServices.clightning-rest = nbLib.mkOnionService {
-              target.addr = nbLib.address clightning-rest.address;
-              target.port = clightning-rest.port;
-              port = clightning-rest.port;
-            };
-          };
-          # This also allows nodeinfo to show the clightning-rest onion address
-          nix-bitcoin.onionAddresses.access.${operatorName} = [ "clightning-rest" ];
         })
       ])
     )

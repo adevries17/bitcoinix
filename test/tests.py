@@ -410,11 +410,6 @@ def _():
     assert_running("clightning")
     assert_matches("runuser -u operator -- lnconnect-clnrest --url", ".onion")
 
-@test("lndconnect-onion-clightning")
-def _():
-    assert_running("clightning-rest")
-    assert_matches("runuser -u operator -- lndconnect-clightning --url", ".onion")
-
 @test("lndconnect-local-bind")
 def _():
     for service in test_data["lndconnect-local-bind"]:
@@ -621,26 +616,6 @@ def _():
               f"printf 'LIGHTNING_RUNE=\"%s\"\\n' \"$(cat {admin_rune})\"")
 
     succeed(f"rm -r {canary} {canary_dir}")
-
-@test("clightning-rest")
-def _():
-    assert_running("clightning-rest")
-    machine.wait_until_succeeds(
-        log_has_string("clightning-rest", "cl-rest api server is ready and listening")
-    )
-
-@test("clightning-rest-local-bind")
-def _():
-    assert_running("clightning-rest")
-    machine.wait_until_succeeds(
-        log_has_string("clightning-rest", "cl-rest doc server is ready and listening")
-    )
-    # The REST and doc servers must listen on localhost only
-    for port in test_data["clightning-rest-local-bind"]:
-        wait_for_open_port("127.0.0.1", port)
-        assert_full_match(
-            f"ss -Htnl 'sport = :{port}' | awk '{{print $4}}' | sort -u", f"127.0.0.1:{port}\n"
-        )
 
 @test("mempool")
 def _():
