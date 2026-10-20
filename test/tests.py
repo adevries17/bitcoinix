@@ -23,6 +23,11 @@ def assert_full_match(cmd, regexp):
 def log_has_string(unit, str):
     return f"journalctl -b --output=cat -u {unit} --grep='{str}'"
 
+def current_run_log_has_string(unit, str):
+    """Like log_has_string, but ignores runs of the unit before its last (re)start"""
+    invocation = f"$(systemctl show -p InvocationID --value {unit})"
+    return f"journalctl -b --output=cat _SYSTEMD_INVOCATION_ID={invocation} --grep='{str}'"
+
 def assert_no_failure(unit):
     """Unit should not have failed since the system is running"""
     machine.fail(log_has_string(unit, "Failed with result"))
@@ -204,6 +209,12 @@ def _():
 @test("electrs")
 def _():
     assert_running("electrs")
+    # electrs.toml holds the public RPC password
+    toml = "/var/lib/electrs/electrs.toml"
+    assert_full_match(f"stat -c '%a %U' {toml}", "600 electrs\n")
+    # A file with laxer permissions (created by earlier versions) is replaced
+    succeed(f"chmod 644 {toml} && systemctl restart electrs")
+    assert_full_match(f"stat -c '%a %U' {toml}", "600 electrs\n")
     wait_for_open_port(ip("electrs"), 4224)  # prometeus metrics provider
     # Check RPC connection to bitcoind
     if not "regtest" in enabled_tests:
@@ -215,6 +226,14 @@ def _():
 def _():
     assert_running("fulcrum")
     machine.wait_until_succeeds(log_has_string("fulcrum", "started ok"))
+    # fulcrum.conf holds the public RPC password
+    conf = "/var/lib/fulcrum/fulcrum.conf"
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 fulcrum\n")
+    # A file with laxer permissions (created by earlier versions) is replaced
+    succeed(f"chmod 644 {conf} && systemctl restart fulcrum")
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 fulcrum\n")
+    # Later tests expect a started fulcrum, not one that is still starting
+    machine.wait_until_succeeds(current_run_log_has_string("fulcrum", "started ok"))
 
 # Impure: Stops electrs
 # Stop electrs from spamming the test log with 'waiting for 0 blocks to download' messages
@@ -641,11 +660,11 @@ def _():
     num_blocks = test_data["num_blocks"]
 
     if enabled("electrs"):
-        machine.wait_until_succeeds(log_has_string("electrs", "serving Electrum RPC"))
+        machine.wait_until_succeeds(current_run_log_has_string("electrs", "serving Electrum RPC"))
         assert_full_match(get_block_height(ip('electrs'), 50001), f"{num_blocks}\n")
 
     if enabled("fulcrum"):
-        machine.wait_until_succeeds(log_has_string("fulcrum", "listening for connections"))
+        machine.wait_until_succeeds(current_run_log_has_string("fulcrum", "listening for connections"))
         assert_full_match(get_block_height(ip('fulcrum'), 50002), f"{num_blocks}\n")
 
     if enabled("clightning"):
