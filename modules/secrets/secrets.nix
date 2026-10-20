@@ -90,6 +90,8 @@ let
           rpcauth = runpy.run_path(sys.argv[1])
           with open(sys.argv[2], newline="") as f:
               password = f.read().rstrip("\n")
+          if not password:
+              sys.exit(f"rpcauth: {sys.argv[2]} contains no password")
           salt = rpcauth["generate_salt"](16)
           print(salt + "$" + rpcauth["password_to_hmac"](salt, password))
           ' ${rpcauthSrc} "$1"

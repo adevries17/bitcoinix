@@ -154,6 +154,13 @@ def _():
     succeed(f"truncate -s 0 {password_file}", generate)
     assert_str_matches(succeed(f"cat {password_file}"), r"\A[a-zA-Z0-9]{20}\n\Z")
     assert_hmac_matches("public")
+
+    # A password file with only a newline is not regenerated (it isn't empty),
+    # but must not get an HMAC of the empty password either
+    succeed(f"rm {hmac_file}", f"echo > {password_file}")
+    status, out = machine.execute(f"{generate} 2>&1")
+    assert status != 0 and "contains no password" in out, out
+    succeed(f"[[ ! -e {hmac_file} && ! -e {hmac_file}.tmp ]]")
     succeed(f"rm -rf {gen_dir} {gen_dir}.trace")
 
 @test("bitcoind")
