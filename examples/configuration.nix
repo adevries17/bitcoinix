@@ -127,10 +127,6 @@
   # services.rtl.nodes.lnd.enable = true;
   #
   # You can enable both nodes simultaneously.
-  #
-  # Set this option to enable swaps with lightning-loop.
-  # Automatically enables lightning-loop.
-  # services.rtl.nodes.lnd.loop = true;
 
   ### MEMPOOL
   # Set this to enable mempool, a fully featured Bitcoin visualizer, explorer,
@@ -203,26 +199,6 @@
   # Trezor can be initialized with the trezorctl command in nix-bitcoin. More information in
   # `../docs/services.md`.
   # services.hardware-wallets.trezor = true;
-
-  ### lightning-loop
-  # Set this to enable lightninglab's non-custodial off/on chain bridge.
-  # services.lightning-loop.enable = true;
-  #
-  # loopd (lightning-loop daemon) will be started automatically. Users can
-  # interact with off/on chain bridge using `loop in` and `loop out`.
-  # Automatically enables lnd.
-
-  ### lightning-pool
-  # Set this to enable Lightning Lab's non-custodial batched uniform
-  # clearing-price auction for Lightning Channel Leases.
-  # services.lightning-pool.enable = true;
-  #
-  # Use the `pool` command to interact with the lightning-pool service.
-  # Automatically enables lnd.
-  #
-  # lightning-pool requires that lnd has a publicly reachable address.
-  # Set this to create a public onion service for lnd.
-  # nix-bitcoin.onionServices.lnd.public = true;
 
   ### charge-lnd
   # Set this to enable charge-lnd, a simple policy based fee manager for

@@ -15,8 +15,6 @@
     ./clightning-rest.nix
     ./clightning-replication.nix
     ./lnd.nix
-    ./lightning-loop.nix
-    ./lightning-pool.nix
     ./charge-lnd.nix
     ./lndconnect.nix # Requires onion-addresses.nix
     ./rtl.nix

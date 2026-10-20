@@ -68,8 +68,6 @@ in {
   # 0.0.59
   (map mkSplitEnforceTorOption [
     "clightning"
-    "lightning-loop"
-    "lightning-pool"
     "lnd"
     "bitcoind"
   ]) ++
@@ -142,6 +140,22 @@ in {
       The netns-exec wrapper has been removed, so there is no user to authorize.
       Remove nix-bitcoin.netns-isolation.allowedUser from your configuration.
       To run a command in a service namespace, use `sudo ip netns exec nb-<service> <command>`.
+    '')
+    (mkRemovedOptionModule [ "services" "lightning-pool" ] ''
+      Lightning Pool support has been removed from bitcoinix to reduce maintenance scope.
+      Remove services.lightning-pool and any Pool-specific onion service or network
+      namespace settings from your configuration. Manage Pool separately if needed;
+      see docs/configuration.md, "Upgrading to config version 0.1.1".
+    '')
+    (mkRemovedOptionModule [ "services" "lightning-loop" ] ''
+      Lightning Loop support has been removed from bitcoinix to reduce maintenance scope.
+      Remove services.lightning-loop and any Loop-specific onion service or network
+      namespace settings from your configuration. Manage Loop separately if needed;
+      see docs/configuration.md, "Upgrading to config version 0.1.1".
+    '')
+    (mkRemovedOptionModule [ "services" "rtl" "nodes" "lnd" "loop" ] ''
+      RTL's Lightning Loop integration has been removed along with Lightning Loop support.
+      Remove services.rtl.nodes.lnd.loop from your configuration.
     '')
   ];
 

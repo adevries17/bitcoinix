@@ -63,6 +63,23 @@ since joinmarket was removed, so it rejected every namespace. To run a command i
 service network namespace, use `sudo ip netns exec nb-<service> <command>`.
 If you set `nix-bitcoin.netns-isolation.allowedUser`, remove it from your configuration.
 
+Lightning Pool and Lightning Loop support, including RTL's Loop integration, has
+also been removed. Remove `services.lightning-pool`, `services.lightning-loop`,
+`services.rtl.nodes.lnd.loop`, and any Pool- or Loop-specific onion service or
+network namespace settings from your configuration.
+
+If you still need either service, arrange a separately managed deployment before
+upgrading. The services stop running after the upgrade, and their packages and
+CLI wrappers are no longer installed by bitcoinix. Existing data directories
+(default: `/var/lib/lightning-pool` and `/var/lib/lightning-loop`) and Loop secrets
+(`loop-key` and `loop-cert` in the secrets directory) are retained. Keep these
+files for the separately managed deployment.
+
+Before upgrading, make sure no Loop swap is in progress (`loop listswaps`). Once a
+Loop Out has revealed its preimage, its sweep must confirm before the HTLC expires,
+otherwise the swap amount is lost. Pool account funds stay locked until the
+account expires; to recover them, run `poold` with the retained data directory.
+
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
 # Customizing your configuration

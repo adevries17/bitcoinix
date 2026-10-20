@@ -228,10 +228,6 @@ in {
       nginx = {
         id = 21;
       };
-      lightning-loop = {
-        id = 22;
-        connections = [ "lnd" ];
-      };
       nbxplorer = {
         id = 23;
         connections = [ "bitcoind" ];
@@ -241,10 +237,6 @@ in {
         connections = [ "nbxplorer" ]
                       ++ optional (config.services.btcpayserver.lightningBackend == "lnd") "lnd";
         # communicates with clightning over rpc socket
-      };
-      lightning-pool = {
-        id = 27;
-        connections = [ "lnd" ];
       };
       charge-lnd = {
         id = 28;
@@ -256,7 +248,6 @@ in {
           nodes = config.services.rtl.nodes;
         in
           optional nodes.lnd.enable "lnd" ++
-          optional (nodes.lnd.enable && nodes.lnd.loop) "lightning-loop" ++
           optional nodes.clightning.enable "clightning";
       };
       clightning-rest = {
@@ -298,12 +289,8 @@ in {
 
     services.fulcrum.address = netns.fulcrum.address;
 
-    services.lightning-loop.rpcAddress = netns.lightning-loop.address;
-
     services.nbxplorer.address = netns.nbxplorer.address;
     services.btcpayserver.address = netns.btcpayserver.address;
-
-    services.lightning-pool.rpcAddress = netns.lightning-pool.address;
 
     services.rtl.address = netns.rtl.address;
 

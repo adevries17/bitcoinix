@@ -46,11 +46,6 @@ let
           default = false;
           description = "Enable the lnd node interface.";
         };
-        loop = mkOption {
-          type = types.bool;
-          default = false;
-          description = "Enable swaps with lightning-loop.";
-        };
         extraConfig = mkOption {
           type = with types; attrsOf anything;
           default = {};
@@ -140,7 +135,6 @@ let
     lnNode = "Node";
     lnImplementation = if isLnd then "LND" else "CLT";
     Authentication = {
-      ${optionalAttr (isLnd && lndLoopEnabled) "swapMacaroonPath"} = "${lightning-loop.dataDir}/${bitcoind.network}";
       ${optionalAttr (isLnd) "macaroonPath"} = "${cfg.dataDir}/macaroons";
       ${optionalAttr (!isLnd) "runePath"} = runePath;
     };
@@ -152,8 +146,6 @@ let
       logLevel = "INFO";
       fiatConversion = cfg.extraCurrency != null;
       ${optionalAttr (cfg.extraCurrency != null) "currencyUnit"} = cfg.extraCurrency;
-      ${optionalAttr (isLnd && lndLoopEnabled) "swapServerUrl"} =
-        "https://${nbLib.addressWithPort lightning-loop.restAddress lightning-loop.restPort}";
       lnServerUrl = "https://${
         if isLnd
         then nbLib.addressWithPort lnd.restAddress lnd.restPort
@@ -182,12 +174,8 @@ let
   configFile = builtins.toFile "config" (builtins.toJSON rtlConfig);
 
   inherit (config.services)
-    bitcoind
     lnd
-    clightning
-    lightning-loop;
-
-  lndLoopEnabled = cfg.nodes.lnd.enable && cfg.nodes.lnd.loop;
+    clightning;
 in {
   inherit options;
 
@@ -201,7 +189,6 @@ in {
     ];
 
     services.lnd.enable = mkIf cfg.nodes.lnd.enable true;
-    services.lightning-loop.enable = mkIf lndLoopEnabled true;
     services.clightning = mkIf cfg.nodes.clightning.enable {
       enable = true;
       plugins.clnrest.enable = true;
@@ -270,7 +257,6 @@ in {
     users.users.${cfg.user} = {
       isSystemUser = true;
       group = cfg.group;
-      extraGroups = optional lndLoopEnabled lnd.group;
     };
     users.groups.${cfg.group} = {};
 

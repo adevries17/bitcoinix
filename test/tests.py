@@ -195,7 +195,7 @@ def _():
     # writable by the lnd user.
     # Test that the script doesn't follow symlinks placed there by the lnd user.
     #
-    # Services like lightning-pool and btcpayserver read the live macaroons, so
+    # Services like btcpayserver read the live macaroons, so
     # the test never touches them: the script writes to a test runtime dir, and
     # for the admin macaroon it runs in a private mount namespace where a test dir
     # is bind-mounted over the lnd network dir.
@@ -281,32 +281,6 @@ def _():
         assert_full_match(
             f"ss -Htnl 'sport = :{port}' | awk '{{print $4}}' | sort -u", f"127.0.0.1:{port}\n"
         )
-
-@test("lightning-loop")
-def _():
-    assert_running("lightning-loop")
-    assert_matches("runuser -u operator -- loop --version", "version")
-    # Check that lightning-loop fails with the right error, making sure
-    # lightning-loop can connect to lnd
-    machine.wait_until_succeeds(
-        log_has_string(
-            "lightning-loop",
-            "Waiting for lnd to be fully synced to its chain backend, this might take a while",
-        )
-    )
-
-@test("lightning-pool")
-def _():
-    assert_running("lightning-pool")
-    assert_matches("su operator -c 'pool --version'", "version")
-    # Check that lightning-pool fails with the right error, making sure
-    # lightning-pool can connect to lnd
-    machine.wait_until_succeeds(
-        log_has_string(
-            "lightning-pool",
-            "Waiting for lnd to be fully synced to its chain backend, this might take a while",
-        )
-    )
 
 @test("charge-lnd")
 def _():
@@ -513,8 +487,8 @@ def _():
 
     # These reachability tests are non-exhaustive
     assert_reachable("bitcoind", ["clightning", "lnd"])
-    assert_unreachable("bitcoind", ["btcpayserver", "rtl", "lightning-loop"])
-    assert_unreachable("btcpayserver", ["bitcoind", "lightning-loop"])
+    assert_unreachable("bitcoind", ["btcpayserver", "rtl"])
+    assert_unreachable("btcpayserver", ["bitcoind"])
 
     # The netns firewall rules are IPv4 only, so the veth inside a netns must
     # have no IPv6 address. Otherwise it is reachable over link-local IPv6
@@ -607,18 +581,6 @@ def _():
         machine.wait_until_succeeds(
             f"[[ $(runuser -u operator -- lncli getinfo | jq -M .block_height) == {num_blocks} ]]"
         )
-
-    if enabled("lightning-loop"):
-        machine.wait_until_succeeds(
-            log_has_string("lightning-loop", f"Starting event loop at height {num_blocks}")
-        )
-        succeed("runuser -u operator -- loop getparams")
-
-    if enabled("lightning-pool"):
-        machine.wait_until_succeeds(
-            log_has_string("lightning-pool", "lnd is now fully synced to its chain backend")
-        )
-        succeed("runuser -u operator -- pool orders list")
 
     if enabled("btcpayserver"):
         machine.wait_until_succeeds(log_has_string("nbxplorer", f"At height: {num_blocks}"))
