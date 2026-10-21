@@ -4,6 +4,17 @@
 # Nodeinfo
 Run `nodeinfo` to see onion addresses and local addresses for enabled services.
 
+The `onion-addresses` service only publishes valid Tor v3 onion addresses. If a
+hostname file is unreadable, contains invalid content, or takes more than 10 seconds
+to read, its address is omitted. Other valid addresses are still published, but
+`onion-addresses.service` reports failure and `nodeinfo` reports an error.
+
+As root, run `journalctl -u onion-addresses` to identify the affected
+`/var/lib/tor/onion/<service>/hostname` file. It must be readable by the `tor` user
+and contain a single v3 onion address, with at most one trailing newline. Once the
+Tor-generated hostname file and its permissions are correct, run
+`systemctl restart onion-addresses` as root, then retry `nodeinfo`.
+
 # Managing services
 
 NixOS uses the [systemd](https://wiki.archlinux.org/title/systemd) service manager.

@@ -747,11 +747,27 @@ def _():
             raise Exception("onion-addresses blocked on the hostname file")
         if status == 0:
             raise Exception("onion-addresses accepted an invalid hostname file")
-        succeed(f"test ! -e {dest}")
         machine.fail(f"grep -rq 'rpcallowip\\|{fake_address}' {data_dir}")
-        # The other addresses are still copied
-        for other in data["access"][user][1:]:
-            succeed(f"test -f {data_dir}/{user}/{other}")
+
+        # Check every destination: the selected user may have only one address.
+        def check_destination(srv, path, owner, mode):
+            if srv == service:
+                succeed(f"test ! -e {path} && test ! -L {path}")
+                return
+
+            assert_full_match(
+                f"stat -c '%F %U %a' {path}",
+                f"regular file {owner} {mode}\n",
+            )
+            expected = succeed(f"cat /var/lib/tor/onion/{srv}/hostname")
+            assert_full_match(f"cat {path}", re.escape(expected))
+
+        for owner, services in data["access"].items():
+            for srv in services:
+                check_destination(srv, f"{data_dir}/{owner}/{srv}", owner, 600)
+
+        for srv, owner in data["serviceUsers"].items():
+            check_destination(srv, f"{data_dir}/services/{srv}", owner, 400)
 
     # Extra lines would be spliced into config files like bitcoin.conf
     assert_rejected(
