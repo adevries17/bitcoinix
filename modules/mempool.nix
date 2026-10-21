@@ -308,9 +308,11 @@ in {
         # /proc/<pid>/cmdline while it runs. jq also escapes it as JSON.
         # Only the default (null) is filled in; an explicit
         # `settings.CORE_RPC.PASSWORD` stays as configured.
-        ${pkgs.jq}/bin/jq --rawfile pw '${secretsDir}/bitcoin-rpcpassword-public' \
-          '.CORE_RPC.PASSWORD |= (if . == null then ($pw | sub("\n+$"; "")) else . end)' ${configFile} \
-          > '${cacheDir}/config.json'
+        conf=$(${pkgs.jq}/bin/jq --rawfile pw '${secretsDir}/bitcoin-rpcpassword-public' \
+          '.CORE_RPC.PASSWORD |= (if . == null then ($pw | sub("\n+$"; "")) else . end)' ${configFile})
+        # config.json holds the public RPC password. Replace it in one step with mode 600,
+        # also when an earlier version left a file with laxer permissions.
+        install -m 600 <(echo "$conf") '${cacheDir}/config.json'
       '';
       environment.MEMPOOL_CONFIG_FILE = "${cacheDir}/config.json";
       serviceConfig = nbLib.defaultHardening // {

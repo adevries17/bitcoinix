@@ -544,6 +544,15 @@ def _():
     machine.wait_until_succeeds(
         log_has_string("mempool", "Mempool Server is running on port 8999")
     )
+    # config.json holds the public RPC password
+    conf = "/var/cache/mempool/config.json"
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 mempool\n")
+    # A file with laxer permissions (created by earlier versions) is replaced
+    succeed(f"chmod 644 {conf} && systemctl restart mempool")
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 mempool\n")
+    machine.wait_until_succeeds(
+        current_run_log_has_string("mempool", "Mempool Server is running on port 8999")
+    )
     assert_matches(f"curl -L {ip('nginx')}:60845", "mempool - Bitcoin Explorer")
 
 @test("nodeinfo")
