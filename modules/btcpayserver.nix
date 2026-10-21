@@ -164,7 +164,7 @@ in {
           cat ${configFile}
           echo "btcrpcpassword=$(cat ${config.nix-bitcoin.secretsDir}/bitcoin-rpcpassword-btcpayserver)"
         )
-        install -m 600 <(echo "$conf") '${cfg.nbxplorer.dataDir}/settings.config'
+        install -T -m 600 <(echo "$conf") '${cfg.nbxplorer.dataDir}/settings.config'
       '';
       serviceConfig = nbLib.defaultHardening // {
         ExecStart = ''

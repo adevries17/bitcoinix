@@ -235,7 +235,7 @@ in {
             echo "externalip=$(${cfg.getPublicAddressCmd})"
           ''}
         )
-        install -m600 <(echo "$conf") '${cfg.dataDir}/lnd.conf'
+        install -T -m 600 <(echo "$conf") '${cfg.dataDir}/lnd.conf'
 
         if [[ ! -f ${networkDir}/wallet.db ]]; then
           seed='${cfg.dataDir}/lnd-seed-mnemonic'

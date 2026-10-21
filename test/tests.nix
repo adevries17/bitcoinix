@@ -144,19 +144,21 @@ let
         cfg.clightning-rest.enable && !config.nix-bitcoin.netns-isolation.enable;
       test.data.clightning-rest-local-bind = with cfg.clightning-rest; [ port docPort ];
 
-      # Config files in data dirs that are writable by a user other than the service user.
+      # Config files in dirs writable by the operator or service user.
       # `planter` is the user that plants the replacement file.
       tests.config-replace = config.test.data.config-replace != [];
       test.data.config-replace =
         optional cfg.bitcoind.enable {
           unit = "bitcoind";
           file = "${cfg.bitcoind.dataDir}/bitcoin.conf";
+          mode = "640";
           inherit (cfg.bitcoind) user;
           planter = config.nix-bitcoin.operator.name;
         }
         ++ optional cfg.clightning.enable {
           unit = "clightning";
           file = "${cfg.clightning.dataDir}/config";
+          mode = "640";
           inherit (cfg.clightning) user;
           planter = config.nix-bitcoin.operator.name;
         }
@@ -164,8 +166,30 @@ let
         ++ optional cfg.lnd.enable {
           unit = "lnd";
           file = "${cfg.lnd.dataDir}/lnd.conf";
+          mode = "600";
           inherit (cfg.lnd) user;
           planter = cfg.lnd.user;
+        }
+        ++ optional cfg.nbxplorer.enable {
+          unit = "nbxplorer";
+          file = "${cfg.nbxplorer.dataDir}/settings.config";
+          mode = "600";
+          inherit (cfg.nbxplorer) user;
+          planter = cfg.nbxplorer.user;
+        }
+        ++ optional cfg.electrs.enable {
+          unit = "electrs";
+          file = "${cfg.electrs.dataDir}/electrs.toml";
+          mode = "600";
+          inherit (cfg.electrs) user;
+          planter = cfg.electrs.user;
+        }
+        ++ optional cfg.mempool.enable {
+          unit = "mempool";
+          file = config.systemd.services.mempool.environment.MEMPOOL_CONFIG_FILE;
+          mode = "600";
+          inherit (cfg.mempool) user;
+          planter = cfg.mempool.user;
         };
 
       tests.charge-lnd = cfg.charge-lnd.enable;

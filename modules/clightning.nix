@@ -174,7 +174,7 @@ in {
             echo "announce-addr=$(${cfg.getPublicAddressCmd}):${toString publicPort}"
           ''}
         )
-        install -m 640 <(echo "$conf") '${cfg.dataDir}/config'
+        install -T -m 640 <(echo "$conf") '${cfg.dataDir}/config'
       '';
       serviceConfig = nbLib.defaultHardening // {
         ExecStart = "${cfg.package}/bin/lightningd --lightning-dir=\"${cfg.dataDir}\"";

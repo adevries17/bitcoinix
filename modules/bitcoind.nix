@@ -426,7 +426,7 @@ in {
         )
         # Always replace the file. The data dir is writable by the operator, which
         # could plant an operator-owned file with identical content to skip the update.
-        install -o '${cfg.user}' -g '${cfg.group}' -m 640 <(echo "$cfg") '${cfg.dataDir}/bitcoin.conf'
+        install -T -o '${cfg.user}' -g '${cfg.group}' -m 640 <(echo "$cfg") '${cfg.dataDir}/bitcoin.conf'
       '';
 
       # Enable RPC access for group.

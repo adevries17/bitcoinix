@@ -122,6 +122,13 @@ It's easiest to use an existing service as a template:
 - [rtl.nix](../modules/rtl.nix): includes a custom package, defined in [pkgs/rtl](../pkgs/rtl).\
   Most other services use packages that are already included in nixpkgs.
 
+For generated configs in writable service directories, use `install -T` with an
+explicit mode to replace the config path, including symlinks to directories.
+The `config-replace` test in [tests.py](../test/tests.py) covers symlinks to files
+and directories for bitcoind, clightning, lnd, nbxplorer, electrs, and mempool. It
+checks the config's owner and mode after restart and verifies that the symlink
+targets remain unchanged.
+
 ## Switching to a new NixOS release
 - Run command `update-flake.sh 26.05`
 - Treewide: check if any `TODO-EXTERNAL` comments can be resolved

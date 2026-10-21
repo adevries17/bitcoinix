@@ -72,7 +72,7 @@ in {
       preStart = ''
         # electrs.toml holds the public RPC password, so create it with mode 600
         # instead of relying on the data directory mode alone.
-        install -m 600 \
+        install -T -m 600 \
           <(echo "auth = \"${bitcoind.rpc.users.public.name}:$(cat ${secretsDir}/bitcoin-rpcpassword-public)\"") \
           electrs.toml
         '';
