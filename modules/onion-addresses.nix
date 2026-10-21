@@ -92,8 +92,11 @@ in {
           local file=/var/lib/tor/onion/$1/hostname content
           waitForFile "$file"
           # Append `x` to keep trailing newlines, which `$(...)` would strip
+          # The timeout makes a FIFO fail the read instead of blocking the unit.
+          # It runs as user tor, because root can't signal the tor process
+          # without CAP_KILL.
           if ! content=$(${pkgs.util-linux}/bin/setpriv --reuid=tor --regid=tor --clear-groups -- \
-                           head -c 100 -- "$file" && echo x); then
+                           ${pkgs.coreutils}/bin/timeout 10 head -c 100 -- "$file" && echo x); then
             echo "Error: Can't read $file as user tor" >&2
             return 1
           fi

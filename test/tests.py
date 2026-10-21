@@ -740,8 +740,11 @@ def _():
 
     def assert_rejected(*replace_hostname):
         succeed(f"mv -T {hostname} {hostname_orig}", *replace_hostname)
-        status, _ = machine.execute(f"systemctl restart {unit}")
+        # A blocked unit must not count as a rejection
+        status, _ = machine.execute(f"timeout 60 systemctl restart {unit}")
         succeed(f"rm -f {hostname}", f"mv -T {hostname_orig} {hostname}")
+        if status == 124:
+            raise Exception("onion-addresses blocked on the hostname file")
         if status == 0:
             raise Exception("onion-addresses accepted an invalid hostname file")
         succeed(f"test ! -e {dest}")
@@ -759,6 +762,8 @@ def _():
     onion_canary = "/run/onion-addresses-test-canary.onion"
     succeed(f"install -m 600 <(echo {fake_address}) {onion_canary}")
     assert_rejected(f"ln -s {onion_canary} {hostname}")
+    # Hostname file is a FIFO. Reading it must time out instead of blocking the unit.
+    assert_rejected(f"runuser -u tor -- mkfifo {hostname}")
 
     succeed(f"rm -r {canary} {canary_dir} {onion_canary}", f"systemctl restart {unit}")
     machine.succeed(f"systemctl reset-failed {unit}")
