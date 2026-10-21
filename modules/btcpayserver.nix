@@ -160,8 +160,11 @@ in {
       wants = [ "bitcoind.service" ];
       after = requires ++ wants ++ [ "nix-bitcoin-secrets.target" ];
       preStart = ''
-        install -m 600 ${configFile} '${cfg.nbxplorer.dataDir}/settings.config'
-        echo "btcrpcpassword=$(cat ${config.nix-bitcoin.secretsDir}/bitcoin-rpcpassword-btcpayserver)" >> '${cfg.nbxplorer.dataDir}/settings.config'
+        conf=$(
+          cat ${configFile}
+          echo "btcrpcpassword=$(cat ${config.nix-bitcoin.secretsDir}/bitcoin-rpcpassword-btcpayserver)"
+        )
+        install -T -m 600 <(echo "$conf") '${cfg.nbxplorer.dataDir}/settings.config'
       '';
       serviceConfig = nbLib.defaultHardening // {
         ExecStart = ''

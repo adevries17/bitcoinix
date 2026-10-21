@@ -544,6 +544,15 @@ def _():
     machine.wait_until_succeeds(
         log_has_string("mempool", "Mempool Server is running on port 8999")
     )
+    # config.json holds the public RPC password
+    conf = "/var/cache/mempool/config.json"
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 mempool\n")
+    # A file with laxer permissions (created by earlier versions) is replaced
+    succeed(f"chmod 644 {conf} && systemctl restart mempool")
+    assert_full_match(f"stat -c '%a %U' {conf}", "600 mempool\n")
+    machine.wait_until_succeeds(
+        current_run_log_has_string("mempool", "Mempool Server is running on port 8999")
+    )
     assert_matches(f"curl -L {ip('nginx')}:60845", "mempool - Bitcoin Explorer")
 
 @test("nodeinfo")
@@ -640,12 +649,62 @@ def _():
     # Sanity-check system by restarting bitcoind.
     succeed("systemctl restart bitcoind")
 
+# Impure: restarts services
+@test("config-replace")
+def _():
+    # Services write their config at start, and the config dirs are writable by
+    # the operator (bitcoind, clightning) or the service user.
+    # Test that symlinks to files and directories are replaced by regular files
+    # with the expected owner and mode, without changing the symlink targets.
+    for data in test_data["config-replace"]:
+        unit, file, user, planter = data["unit"], data["file"], data["user"], data["planter"]
+        with machine.nested(f"config file: {file}"):
+            # The unit might still be restarting after the preceding 'restart-bitcoind' test
+            succeed(f"systemctl start {unit}")
+            orig = f"{file}.orig"
+            # The target must be inside the config dir, which is the only path the
+            # service can write (ProtectSystem, ProtectHome, PrivateTmp)
+            target = f"{os.path.dirname(file)}/config-replace-target"
+            for target_type in ("file", "directory"):
+                with machine.nested(f"symlink to {target_type}"):
+                    # A started unit may still be reading its config. Stop it
+                    # before planting the symlink for the next start.
+                    succeed(f"systemctl stop {unit}")
+                    if target_type == "file":
+                        # Identical content also covers services that skip an
+                        # update when the content is unchanged.
+                        succeed(
+                            f"cat {file} > {target}",
+                            f"chown {planter} {target}",
+                            f"chmod 666 {target}",
+                        )
+                        contents = f"cat {target}"
+                    else:
+                        # Without install -T, install writes inside this writable
+                        # directory and leaves the config symlink in place.
+                        succeed(f"install -d -o {user} -m 700 {target}")
+                        contents = f"find {target} -mindepth 1 -print"
+                    metadata = f"stat -c '%i %U %G %a %s %y %z' {target}"
+                    before_contents = succeed(contents)
+                    before_metadata = succeed(metadata)
+                    succeed(
+                        f"runuser -u {planter} -- sh -c 'mv {file} {orig} && ln -s {target} {file}'",
+                        f"systemctl start {unit}",
+                    )
+                    machine.wait_for_unit(unit)
+                    assert_full_match(
+                        f"stat -c '%U %a %F' {file}", f"{user} {data['mode']} regular file\n"
+                    )
+                    assert_full_match(contents, re.escape(before_contents))
+                    assert_full_match(metadata, re.escape(before_metadata))
+                    succeed(f"rm {orig}", f"{'rm' if target_type == 'file' else 'rmdir'} {target}")
+
 @test("regtest")
 def _():
     def enabled(unit):
         if unit in enabled_tests:
-            # Wait because the unit might have been restarted in the preceding
-            # 'restart-bitcoind' test
+            # The preceding tests may have restarted the unit. This only waits
+            # for systemd; each check below must also wait for service readiness.
             machine.wait_for_unit(unit)
             return True
         else:
@@ -682,8 +741,8 @@ def _():
 
     if enabled("mempool"):
         assert_running("nginx")
-        assert_full_match(
-            f"curl -fsS http://{ip('nginx')}:60845/api/v1/blocks/tip/height", str(num_blocks)
+        machine.wait_until_succeeds(
+            f"[[ $(curl -fsS http://{ip('nginx')}:60845/api/v1/blocks/tip/height) == {num_blocks} ]]"
         )
 
 @test("trustedcoin")
