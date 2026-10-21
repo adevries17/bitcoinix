@@ -80,6 +80,17 @@ Loop Out has revealed its preimage, its sweep must confirm before the HTLC expir
 otherwise the swap amount is lost. Pool account funds stay locked until the
 account expires; to recover them, run `poold` with the retained data directory.
 
+BTCPay Server's wallet UTXO scan is now disabled by default. The `btcpayserver`
+RPC user no longer has permission to call `scantxoutset`, because a scan can keep
+bitcoind busy for minutes. If you use this feature, explicitly restore permission:
+
+```nix
+services.bitcoind.rpc.users.btcpayserver.rpcwhitelist = [ "scantxoutset" ];
+```
+
+If you do not use wallet UTXO scanning, leave it disabled and acknowledge the
+change by updating the config version below.
+
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
 # Customizing your configuration
