@@ -98,6 +98,11 @@ let
   nbLib = config.nix-bitcoin.lib;
 
   inherit (config.services) bitcoind;
+  # Neither NBXplorer nor BTCPay ships an appsettings*.json; their settings
+  # come from the config file we write (loaded without reload). So the generic
+  # host's reload-on-change watcher has nothing to watch and would only ever
+  # walk the content root recursively. Turn it off.
+  dotnetNoReload = { DOTNET_hostBuilder__reloadConfigOnChange = "false"; };
 in {
   inherit options;
 
@@ -159,6 +164,7 @@ in {
       requires = [ "postgresql.target" ];
       wants = [ "bitcoind.service" ];
       after = requires ++ wants ++ [ "nix-bitcoin-secrets.target" ];
+      environment = dotnetNoReload;
       preStart = ''
         conf=$(
           cat ${configFile}
@@ -172,6 +178,18 @@ in {
             --datadir=${cfg.nbxplorer.dataDir}
         '';
         User = cfg.nbxplorer.user;
+        # The .NET host takes its ASP.NET content root from the working
+        # directory. Without an explicit one that root was `/`, and the host's
+        # reload-on-change watcher registered an inotify watch on every
+        # directory of the root filesystem -- the whole Nix store -- plus one
+        # for each directory created afterwards. On a node that builds, this
+        # exhausted the per-user inotify watch limit within days and systemd
+        # then failed to set up cgroup accounting for every new unit.
+        # Use the immutable app directory (as btcpayserver does below), NOT the
+        # data directory: a writable content root would let anything running
+        # as the nbxplorer user drop an `appsettings.json` that overrides the
+        # Nix-managed settings.config on the next start.
+        WorkingDirectory = "${cfg.nbxplorer.package}/lib/nbxplorer";
         Restart = "on-failure";
         RestartSec = "10s";
         ReadWritePaths = [ cfg.nbxplorer.dataDir ];
@@ -204,6 +222,7 @@ in {
         ));
     in rec {
       wantedBy = [ "multi-user.target" ];
+      environment = dotnetNoReload;
       requires = [ "postgresql.target" ];
       wants = [ "nbxplorer.service" ]
               ++ optional (cfg.btcpayserver.lightningBackend != null) "${cfg.btcpayserver.lightningBackend}.service";
