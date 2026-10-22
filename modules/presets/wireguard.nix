@@ -3,7 +3,7 @@
 # Create a WireGuard server with a single peer.
 # Private/public keys are created via the secrets system.
 # Add helper binaries `nix-bitcoin-wg-connect` and optionally `lndconnect-wg`,
-# `lnconnect-clnrest-wg`, `lndconnect-clightning-wg`.
+# `lnconnect-clnrest-wg`.
 
 # See ../../docs/services.md ("Use Zeus (mobile lightning wallet) via WireGuard")
 # for usage instructions.
@@ -34,13 +34,11 @@ let
   inherit (config.networking.wireguard.interfaces) wg-nb;
   inherit (config.services)
     lnd
-    clightning
-    clightning-rest;
+    clightning;
   inherit (clightning.plugins) clnrest;
 
   lndconnect = lnd.enable && lnd.lndconnect.enable;
   lnconnect-clnrest = clnrest.enable && clnrest.lnconnect.enable;
-  lndconnect-clightning = clightning-rest.enable && clightning-rest.lndconnect.enable;
 
   serverAddress = "${wgSubnet}.1";
   peerAddress = "${wgSubnet}.2";
@@ -112,7 +110,7 @@ in {
         # `extraCommands` rules, which also enforce `restrictPeer`. `extraCommands`
         # run only with the iptables backend: NixOS rejects a non-empty
         # `extraCommands` under nftables, and firewalld silently ignores them.
-        assertion = !(lndconnect || lnconnect-clnrest || lndconnect-clightning || cfg.restrictPeer)
+        assertion = !(lndconnect || lnconnect-clnrest || cfg.restrictPeer)
                     || (config.networking.firewall.enable && config.networking.firewall.backend == "iptables");
         message = "`nix-bitcoin.wireguard` protects the REST API of the enabled `*connect` helpers (bound to 0.0.0.0) and enforces `restrictPeer` only through `networking.firewall.extraCommands`, which run only with the iptables backend. Enable `networking.firewall` and disable `networking.nftables` and `services.firewalld`, so that the firewall defaults to the iptables backend.";
       }
@@ -170,10 +168,6 @@ in {
       (pkgs.writers.writeBashBin "lnconnect-clnrest-wg" ''
         exec lnconnect-clnrest --host "${serverAddress}" --nocert "$@"
       '')
-    ) ++ (optional lndconnect-clightning
-      (pkgs.writers.writeBashBin "lndconnect-clightning-wg" ''
-        exec lndconnect-clightning --host "${serverAddress}" --nocert "$@"
-      '')
     );
 
     networking.firewall = let
@@ -192,9 +186,6 @@ in {
         ''
         + optionalString lnconnect-clnrest ''
           iptables -w -A nixos-fw -i wg-nb -p tcp -s ${wgSubnet}.0/24 -d ${serverAddress} --dport ${toString clnrest.port} -j nixos-fw-accept
-        ''
-        + optionalString lndconnect-clightning ''
-          iptables -w -A nixos-fw -i wg-nb -p tcp -s ${wgSubnet}.0/24 -d ${serverAddress} --dport ${toString clightning-rest.port} -j nixos-fw-accept
         ''
         # Insert first: NixOS fills `nixos-fw` with its ACCEPT rules (`allowedTCPPorts`) before `extraCommands`.
         # The rule only matches peer traffic not sent to `serverAddress`, so tunnel flows still pass.
@@ -221,11 +212,6 @@ in {
     services.clightning.plugins.clnrest.address = mkIf lnconnect-clnrest "0.0.0.0";
     # clnrest runs inside `clightning.service`
     services.clightning.tor.enforce = mkIf lnconnect-clnrest false;
-
-    services.clightning-rest = mkIf lndconnect-clightning {
-      address = "0.0.0.0";
-      tor.enforce = false;
-    };
 
     nix-bitcoin.secrets = {
       wg-server-private-key = {};

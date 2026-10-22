@@ -115,17 +115,6 @@ let
     }
     {
       version = "0.0.70";
-      condition = config.services.clightning-rest.enable;
-      message = ''
-        The `cl-rest` service has been renamed to `clightning-rest`.
-        and is now available as a standalone service (`services.clightning-rest`).
-        Its data dir has moved to `${config.services.clightning-rest.dataDir}`,
-        and the service now runs under the clightning user and group.
-        The data dir migration happens automatically after deploying.
-      '';
-    }
-    {
-      version = "0.0.70";
       condition = options.services.lnd.lndconnectOnion.isDefined;
       message = ''
         The `lndconnect-rest-onion` binary has been renamed to `lndconnect`.
@@ -169,18 +158,6 @@ let
         (default: /var/lib/liquidd), but the backups service no longer includes it.
         See docs/configuration.md, "Upgrading to config version 0.1.1", for how to keep
         backing up and later access your wallets.
-      '';
-    }
-    {
-      version = "0.1.1";
-      condition = with config.services;
-        clightning-rest.enable && clightning-rest.address == "127.0.0.1"
-        && !(clightning-rest.extraConfig ? BIND);
-      message = ''
-        clightning-rest now listens on localhost only (`services.clightning-rest.address`
-        defaults to 127.0.0.1). It previously listened on all interfaces.
-        To connect over your LAN or VPN, set the address yourself. See docs/services.md,
-        "Connecting without Tor or WireGuard".
       '';
     }
     {
@@ -252,7 +229,39 @@ let
         "Upgrading to config version 0.1.1".
       '';
     }
+    {
+      version = "0.1.1";
+      condition = clightningRestUsed;
+      message = ''
+        c-lightning-REST is no longer maintained and has been removed.
+        Remove `services.clightning-rest`, the legacy `services.rtl.cl-rest` option,
+        and any associated onion service or network namespace settings from your
+        configuration. Use `services.clightning.plugins.clnrest` instead.
+        Replace `lndconnect-clightning` and `lndconnect-clightning-wg` with
+        `lnconnect-clnrest` and `lnconnect-clnrest-wg` and reconnect your clients.
+        Custom clients must adapt to clnrest's API. clnrest shares Core Lightning's
+        service sandbox, network namespace and Tor-enforcement settings.
+
+        Existing data is retained, but the backups service no longer includes the
+        former data directory (default: /var/lib/clightning-rest).
+        See docs/configuration.md, "Upgrading to config version 0.1.1", for migration
+        and backup instructions.
+      '';
+    }
+    {
+      version = "0.1.1";
+      condition = !clightningRestUsed
+        && config.services.backups.enable && config.services.clightning.enable;
+      message = ''
+        c-lightning-REST has been removed. If you previously ran it, the backups service
+        no longer includes its data directory (default: /var/lib/clightning-rest).
+        See docs/configuration.md, "Upgrading to config version 0.1.1".
+      '';
+    }
   ];
+
+  clightningRestUsed = options.services.clightning-rest.isDefined
+    || options.services.rtl.cl-rest.isDefined;
 
   mkOnionServiceChange = service: {
     version = "0.0.30";

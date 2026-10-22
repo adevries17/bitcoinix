@@ -64,13 +64,6 @@ with lib;
         };
       };
     };
-    services.clightning-rest = {
-      enable = true;
-      lndconnect = {
-        enable = true;
-        onion = true;
-      };
-    };
     nix-bitcoin.nodeinfo.enable = true;
   };
 

@@ -3,11 +3,8 @@
 # Docs
 # https://github.com/Ride-The-Lightning/RTL
 # config options: https://github.com/Ride-The-Lightning/RTL/blob/master/.github/docs/Application_configurations.md
-# https://github.com/Ride-The-Lightning/c-lightning-REST
+# https://docs.corelightning.org/docs/rest
 # local src: ~/s/RTL/
-
-# Browse API docs (in container shell)
-runuser -u "$(logname)" -- xdg-open "http://$ip:4001/api-docs/"
 
 #―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 # Debug the service

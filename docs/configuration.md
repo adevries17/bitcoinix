@@ -100,6 +100,71 @@ with their original permissions. Do not reuse them. If another application used
 this macaroon, give it a separate macaroon with the permissions it needs via
 `services.lnd.macaroons`.
 
+`lnconnect-clnrest` now includes clnrest's server certificate (`server.pem`) in
+direct connection URLs. Previously it included the mutual-TLS client certificate
+(`client.pem`), which did not match the certificate presented by clnrest. Regenerate
+direct connection URLs and reconnect clients. Tor and WireGuard URLs use `--nocert`
+and are unaffected.
+
+c-lightning-REST support has been removed because it is no longer maintained.
+Remove `services.clightning-rest` (or the legacy `services.rtl.cl-rest`) and any
+associated onion service or network namespace settings from your configuration.
+Use the clnrest plugin for Core Lightning's REST API:
+
+```nix
+services.clightning = {
+  enable = true;
+  plugins.clnrest = {
+    enable = true;
+    # Optional: connection helper and access via Tor
+    lnconnect = {
+      enable = true;
+      onion = true;
+    };
+  };
+};
+```
+
+clnrest uses runes for authentication instead of c-lightning-REST macaroons and
+listens on port 3010 by default. Reconnect clients using `lnconnect-clnrest`
+instead of `lndconnect-clightning`, or `lnconnect-clnrest-wg` instead of
+`lndconnect-clightning-wg` with the WireGuard preset. See
+[connecting via Tor](./services.md#use-zeus-mobile-lightning-wallet-via-tor) and
+[connecting via WireGuard](./services.md#use-zeus-mobile-lightning-wallet-via-wireguard).
+RTL already uses clnrest and enables it automatically for its Core Lightning node.
+
+Custom API clients must switch to `POST /v1/<rpc-method>` with JSON parameters and
+handle native Core Lightning RPC responses. The convenience endpoints `getBalance`,
+`getFees`, and `channel/localRemoteBal` are gone; calculate their summaries from
+`listfunds`, `getinfo`, and `listpeerchannels`. The old `/v1/ws` protocol is also
+replaced by clnrest's notification streaming. See the
+[upstream migration guide](https://github.com/Ride-The-Lightning/c-lightning-REST#migrating).
+
+clnrest runs within `clightning.service` and shares Core Lightning's network
+namespace and sandbox. There is no separate REST service or API-specific Tor
+enforcement setting. `services.clightning.tor.enforce` applies to both; the WireGuard
+preset disables enforcement for that service to allow connections over the tunnel.
+
+Swagger documentation is served on the REST API port at `/`, instead of a separate
+`docPort`. If you used `extraConfig.DOMAIN` for a custom certificate hostname,
+supply suitable certificates with the `clnrest-certs` option through
+`services.clightning.extraConfig`. When using a custom certificate directory, pass
+`--tlscertpath=/path/to/certs/server.pem` to `lnconnect-clnrest` for direct TLS
+connection URLs. See the
+[clnrest configuration reference](https://docs.corelightning.org/docs/rest#configuration).
+
+The former c-lightning-REST data directory (default: `/var/lib/clightning-rest`)
+and onion service keys (`/var/lib/tor/onion/clightning-rest`, if configured) are
+retained. The backups service no longer includes the former data directory.
+To keep backing it up, add its path to `services.backups.extraFiles`:
+
+```nix
+services.backups.extraFiles = [ "/var/lib/clightning-rest" ];
+```
+
+By default, clnrest's certificates and rune are stored in Core Lightning's network directory
+and remain covered by the Core Lightning backup.
+
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
 # Customizing your configuration

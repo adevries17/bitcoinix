@@ -33,7 +33,6 @@ in {
     fulcrum = defaultEnforceTor;
     nbxplorer = defaultEnforceTor;
     rtl = defaultEnforceTor;
-    clightning-rest = defaultEnforceTor;
   };
 
   # Add onion services for incoming connections

@@ -5,10 +5,9 @@
 run-tests.sh -s wireguard-lndconnect-online container
 
 # 2. Test connecting via Tor
-# Print QR codes for lnd, clightning-rest connections via Tor
+# Print QR codes for lnd and clnrest connections via Tor
 c lndconnect
 c lnconnect-clnrest
-c lndconnect-clightning
 # Add these to Zeus >= 0.9.0.
 # To explicitly check if the connection is successful, press the node logo in the top
 # left corner, and then "Node Info".
@@ -16,7 +15,6 @@ c lndconnect-clightning
 # Debug
 c lndconnect --url
 c lnconnect-clnrest --url
-c lndconnect-clightning --url
 
 # 3. Test connecting via WireGuard
 
@@ -33,10 +31,9 @@ iptables -t nat -A PREROUTING -p udp --dport 51821 -j DNAT --to-destination 10.2
 c nix-bitcoin-wg-connect
 c nix-bitcoin-wg-connect --text
 
-# Print QR codes for lnd, clightning-rest connections via WireGuard
+# Print QR codes for lnd and clnrest connections via WireGuard
 c lndconnect-wg
 c lnconnect-clnrest-wg
-c lndconnect-clightning-wg
 # Add these to Zeus >= 0.9.0.
 # To explicitly check if the connection is successful, press the menu button in the top
 # left corner, and then "Node Info".
@@ -44,7 +41,6 @@ c lndconnect-clightning-wg
 # Debug
 c lndconnect-wg --url
 c lnconnect-clnrest-wg --url
-c lndconnect-clightning-wg --url
 
 # 3.3.remove external firewall port forward, remove local port forward:
 iptables -t nat -D PREROUTING -p udp --dport 51821 -j DNAT --to-destination 10.225.255.2
@@ -59,12 +55,10 @@ c nodeinfo
 
 c lndconnect --url
 c lndconnect-wg --url
-c lndconnect-clnrest --url
-c lndconnect-clnrest-wg --url
-c lndconnect-clightning --url
-c lndconnect-clightning-wg --url
+c lnconnect-clnrest --url
+c lnconnect-clnrest-wg --url
 
 c lndconnect
 c lndconnect-wg
-c lndconnect-clightning
-c lndconnect-clightning-wg
+c lnconnect-clnrest
+c lnconnect-clnrest-wg

@@ -1,4 +1,6 @@
 from collections import OrderedDict
+from urllib.parse import parse_qs, urlparse
+import base64
 import hmac
 import json
 import os
@@ -410,10 +412,20 @@ def _():
     assert_running("clightning")
     assert_matches("runuser -u operator -- lnconnect-clnrest --url", ".onion")
 
-@test("lndconnect-onion-clightning")
+@test("lnconnect-clnrest-cert")
 def _():
-    assert_running("clightning-rest")
-    assert_matches("runuser -u operator -- lndconnect-clightning --url", ".onion")
+    assert_running("clightning")
+    host = ip("clightning")
+    url = urlparse(succeed(f"runuser -u operator -- lnconnect-clnrest --host {host} --url").strip())
+    assert url.scheme == "clnrest" and url.hostname == host
+    encoded_cert = parse_qs(url.query)["cert"][0]
+    url_cert = base64.urlsafe_b64decode(encoded_cert + "===")
+    # Compare with the TLS handshake, so a client certificate cannot pass this check.
+    server_cert = succeed(
+        f"openssl s_client -connect {host}:{url.port} </dev/null 2>/dev/null "
+        "| openssl x509 -outform DER | base64 -w0"
+    )
+    assert url_cert == base64.b64decode(server_cert), "Connection URL contains the wrong TLS certificate"
 
 @test("lndconnect-local-bind")
 def _():
@@ -621,26 +633,6 @@ def _():
               f"printf 'LIGHTNING_RUNE=\"%s\"\\n' \"$(cat {admin_rune})\"")
 
     succeed(f"rm -r {canary} {canary_dir}")
-
-@test("clightning-rest")
-def _():
-    assert_running("clightning-rest")
-    machine.wait_until_succeeds(
-        log_has_string("clightning-rest", "cl-rest api server is ready and listening")
-    )
-
-@test("clightning-rest-local-bind")
-def _():
-    assert_running("clightning-rest")
-    machine.wait_until_succeeds(
-        log_has_string("clightning-rest", "cl-rest doc server is ready and listening")
-    )
-    # The REST and doc servers must listen on localhost only
-    for port in test_data["clightning-rest-local-bind"]:
-        wait_for_open_port("127.0.0.1", port)
-        assert_full_match(
-            f"ss -Htnl 'sport = :{port}' | awk '{{print $4}}' | sort -u", f"127.0.0.1:{port}\n"
-        )
 
 @test("mempool")
 def _():

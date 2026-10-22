@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ lib, ... }:
 
 with lib;
 let
@@ -28,9 +28,6 @@ in {
     (mkRenamedOptionModule [ "services" "lnd" "listen" ] [ "services" "lnd" "address" ])
     (mkRenamedOptionModule [ "services" "lnd" "listenPort" ] [ "services" "lnd" "port" ])
     (mkRenamedOptionModule [ "services" "btcpayserver" "bind" ] [ "services" "btcpayserver" "address" ])
-    # 0.0.70
-    (mkRenamedOptionModule [ "services" "rtl" "cl-rest" ] [ "services" "clightning-rest" ])
-
     (mkRenamedOptionModule [ "nix-bitcoin" "setup-secrets" ] [ "nix-bitcoin" "setupSecrets" ])
 
     (mkRenamedAnnounceTorOption "clightning")
@@ -53,13 +50,6 @@ in {
     (mkRemovedOptionModule [ "services" "lnd" "lndconnectOnion" ] ''
       Set the following options instead:
       services.lnd.lndconnect = {
-        enable = true;
-        onion = true;
-      }
-    '')
-    (mkRemovedOptionModule [ "services" "clightning-rest" "lndconnectOnion" ] ''
-      Set the following options instead:
-      services.clightning-rest.lndconnect = {
         enable = true;
         onion = true;
       }
@@ -92,7 +82,7 @@ in {
       Spark Lightning Wallet is unmaintained and incompatible with clightning
       23.05. Therefore, the spark-wallet module has been removed from
       nix-bitcoin. For a replacement, consider using the rtl (Ride The
-      Lightning) module or the clightning-rest module in combination with the
+      Lightning) module or the clnrest plugin in combination with the
       Zeus mobile wallet.
     '')
   ]
@@ -157,23 +147,15 @@ in {
       RTL's Lightning Loop integration has been removed along with Lightning Loop support.
       Remove services.rtl.nodes.lnd.loop from your configuration.
     '')
+    (mkRemovedOptionModule [ "services" "clightning-rest" ] ''
+      c-lightning-REST is no longer maintained and has been removed from bitcoinix.
+      Remove services.clightning-rest and enable services.clightning.plugins.clnrest instead.
+      See docs/configuration.md, "Upgrading to config version 0.1.1", for migration steps.
+    '')
+    (mkRemovedOptionModule [ "services" "rtl" "cl-rest" ] ''
+      c-lightning-REST is no longer maintained and has been removed from bitcoinix.
+      Remove services.rtl.cl-rest. RTL uses services.clightning.plugins.clnrest instead.
+      See docs/configuration.md, "Upgrading to config version 0.1.1", for migration steps.
+    '')
   ];
-
-  config = {
-    # Migrate old clightning-rest datadir from nix-bitcoin versions < 0.0.70
-    systemd.services.clightning-rest-migrate-datadir = let
-      inherit (config.services) clightning-rest clightning;
-    in mkIf config.services.clightning-rest.enable {
-      requiredBy = [ "clightning-rest.service" ];
-      before = [ "clightning-rest.service" ];
-      script = ''
-        if [[ -e /var/lib/cl-rest/certs ]]; then
-          mv /var/lib/cl-rest/* '${clightning-rest.dataDir}'
-          chown -R ${clightning.user}: '${clightning-rest.dataDir}'
-          rm -r /var/lib/cl-rest
-        fi
-      '';
-      serviceConfig.Type = "oneshot";
-    };
-  };
 }

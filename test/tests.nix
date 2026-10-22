@@ -31,6 +31,8 @@ let
         (mkIfTest "lnd" [ openssl ])
         # Needed to authenticate with charge-lnd's macaroon
         (mkIfTest "charge-lnd" [ curl xxd ])
+        # Compare the certificate in a connection URL with the live TLS certificate
+        (mkIfTest "lnconnect-clnrest-cert" [ openssl ])
         # Needed to trace the commands run by secret generation
         (mkIfTest "secrets-no-argv" [ strace ])
       ]);
@@ -85,8 +87,6 @@ let
           trustedcoin.path = "${plugins.trustedcoin.package}/bin/trustedcoin";
         };
       in map (plugin: pluginPkgs.${plugin}.path) enabled;
-
-      tests.clightning-rest = cfg.clightning-rest.enable;
 
       tests.rtl = cfg.rtl.enable;
       tests.rtl-credentials = cfg.rtl.enable;
@@ -144,7 +144,8 @@ let
 
       tests.lndconnect-onion-lnd = with cfg.lnd.lndconnect; enable && onion;
       tests.lnconnect-onion-clnrest = with cfg.clightning.plugins.clnrest.lnconnect; enable && onion;
-      tests.lndconnect-onion-clightning = with cfg.clightning-rest.lndconnect; enable && onion;
+      tests.lnconnect-clnrest-cert = with cfg.clightning.plugins.clnrest;
+        enable && lnconnect.enable && !lnconnect.onion;
 
       # lndconnect without onion must leave the REST servers on localhost.
       # With netns-isolation, the addresses are set by netns-isolation.
@@ -160,11 +161,6 @@ let
           unit = "clightning";
           port = cfg.clightning.plugins.clnrest.port;
         };
-
-      # With netns-isolation, the address is set by netns-isolation.
-      tests.clightning-rest-local-bind =
-        cfg.clightning-rest.enable && !config.nix-bitcoin.netns-isolation.enable;
-      test.data.clightning-rest-local-bind = with cfg.clightning-rest; [ port docPort ];
 
       # Config files in dirs writable by the operator or service user.
       # `planter` is the user that plants the replacement file.
@@ -287,8 +283,6 @@ let
       };
       test.features.clightningPlugins = true;
       services.rtl.enable = true;
-      services.clightning-rest.enable = true;
-      services.clightning-rest.lndconnect = { enable = true; onion = true; };
       services.lnd.enable = true;
       services.lnd.lndconnect = { enable = true; onion = true; };
       services.charge-lnd.enable = true;
@@ -335,7 +329,6 @@ let
         lnconnect.enable = true;
       };
       test.features.clightningPlugins = true;
-      services.clightning-rest.enable = true;
       services.rtl.enable = true;
       services.mempool.enable = true;
       services.lnd.enable = true;

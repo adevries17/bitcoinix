@@ -250,9 +250,6 @@ in {
           optional nodes.lnd.enable "lnd" ++
           optional nodes.clightning.enable "clightning";
       };
-      clightning-rest = {
-        id = 30;
-      };
       fulcrum = {
         id = 31;
         connections = [ "bitcoind" ];
@@ -293,8 +290,6 @@ in {
     services.btcpayserver.address = netns.btcpayserver.address;
 
     services.rtl.address = netns.rtl.address;
-
-    services.clightning-rest.address = netns.clightning-rest.address;
 
     services.mempool.address = netns.mempool.address;
     services.mempool.frontend.address = netns.nginx.address;

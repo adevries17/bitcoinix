@@ -120,14 +120,6 @@ nix eval --raw .#makeTest --apply '
 '
 
 #―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-# clightning-rest
-run-tests.sh -s clightning-rest container
-
-c systemctl status clightning-rest
-c journalctl -u clightning-rest
-c systemctl status clightning-rest-migrate-datadir
-
-#―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 # electrs
 
 run-tests.sh -s "{
@@ -234,7 +226,6 @@ run-tests.sh container
 c cat /var/lib/tor/state
 c ls -al /var/lib/tor/onion/
 c ls -al /var/lib/tor/onion/bitcoind
-c ls -al /var/lib/tor/onion/clightning-rest
 
 #―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 # trustedcoin
