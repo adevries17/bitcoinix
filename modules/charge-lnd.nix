@@ -88,7 +88,15 @@ in
       enable = true;
       macaroons.charge-lnd = {
         user = user;
-        permissions = ''{"entity":"info","action":"read"},{"entity":"onchain","action":"read"},{"entity":"offchain","action":"read"},{"entity":"offchain","action":"write"}'';
+        # offchain:write would also allow sending payments and abandoning channels.
+        # Restrict writes to the two RPCs used to manage channel policies.
+        permissions = ''
+          {"entity":"info","action":"read"},
+          {"entity":"onchain","action":"read"},
+          {"entity":"offchain","action":"read"},
+          {"entity":"uri","action":"/lnrpc.Lightning/UpdateChannelPolicy"},
+          {"entity":"uri","action":"/routerrpc.Router/UpdateChanStatus"}
+        '';
       };
     };
 

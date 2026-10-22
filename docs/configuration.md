@@ -91,6 +91,15 @@ services.bitcoind.rpc.users.btcpayserver.rpcwhitelist = [ "scantxoutset" ];
 If you do not use wallet UTXO scanning, leave it disabled and acknowledge the
 change by updating the config version below.
 
+The charge-lnd macaroon now grants read access and write access only to
+`UpdateChannelPolicy` and `UpdateChanStatus`. The previous broad `offchain:write`
+grant also allowed sending payments and abandoning channels. lnd regenerates
+`/run/lnd/charge-lnd.macaroon` with the restricted permissions when it restarts
+during deployment. Regeneration does not revoke old copies: they remain valid
+with their original permissions. Do not reuse them. If another application used
+this macaroon, give it a separate macaroon with the permissions it needs via
+`services.lnd.macaroons`.
+
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
 # Customizing your configuration
