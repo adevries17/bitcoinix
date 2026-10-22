@@ -144,7 +144,7 @@ let
     ${shebang}
     url=$(
       ${getExe config.nix-bitcoin.pkgs.lndconnect} --url \
-        ${optionalString enableOnion "--host=$(cat ${config.nix-bitcoin.onionAddresses.dataDir}/${onionService})"} \
+        ${optionalString enableOnion "--host=\"$(cat '${config.nix-bitcoin.onionAddresses.dataDir}/${onionService}')\""} \
         --port=${toString port} \
         ${if enableOnion || certPath == null then "--nocert" else "--tlscertpath='${certPath}'"} \
         --adminmacaroonpath='${authSecretPath}' \
