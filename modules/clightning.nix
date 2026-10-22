@@ -158,7 +158,14 @@ in {
 
     systemd.services.clightning = {
       path  = [ bitcoind.package ];
-      wantedBy = [ "multi-user.target" ];
+      # `wantedBy` bitcoind: a deploy that changes the bitcoind unit stops and
+      # starts bitcoind. `requires` propagates the stop to this unit, and on
+      # production nodes the unit stayed down after such a switch. Being wanted
+      # by bitcoind ties this unit's start to bitcoind's own start job, ordered
+      # after it. `requires` stays so that an explicit `systemctl stop bitcoind`
+      # keeps every dependent down, with no restart that could pull bitcoind
+      # back up.
+      wantedBy = [ "multi-user.target" "bitcoind.service" ];
       requires = [ "bitcoind.service" ];
       after = [ "bitcoind.service" "nix-bitcoin-secrets.target" ];
       preStart = ''
