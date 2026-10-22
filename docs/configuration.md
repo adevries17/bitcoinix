@@ -167,6 +167,28 @@ and remain covered by the Core Lightning backup.
 
 After migrating your configuration, set `nix-bitcoin.configVersion = "0.1.1";`.
 
+### Upgrading to config version 0.1.2
+
+bitcoind's RPC authentication cookie now lives at `/run/bitcoind/.cookie` for both
+mainnet and regtest. The runtime directory allows the bitcoind service group to
+read the cookie while preventing group members from replacing it.
+
+Update external RPC clients and scripts that read `/var/lib/bitcoind/.cookie`
+or `/var/lib/bitcoind/regtest/.cookie` to use `/run/bitcoind/.cookie`. If you set
+`services.bitcoind.dataDir`, the old cookie was under that directory instead.
+For clients running in containers or filesystem sandboxes, update any bind mounts
+or allowed paths for cookie access as well.
+
+The `bitcoin-cli` installed by bitcoinix reads the new path from `bitcoin.conf`
+automatically. Services configured by bitcoinix use RPC credentials and need no
+cookie path changes.
+
+An old cookie can remain in the data directory after an unclean shutdown before
+the upgrade. Once the upgraded bitcoind is running, that old cookie is stale and
+can be removed. bitcoind creates a new cookie in `/run/bitcoind` each time it starts.
+
+After updating any affected clients, set `nix-bitcoin.configVersion = "0.1.2";`.
+
 # Customizing your configuration
 
 ## Get started with Nix
