@@ -638,6 +638,14 @@ def _():
         current_run_log_has_string("mempool", "Mempool Server is running on port 8999")
     )
     assert_matches(f"curl -L {ip('nginx')}:60845", "mempool - Bitcoin Explorer")
+    # Check the backend listener in its own namespace when isolation is enabled.
+    netns = "ip netns exec nb-mempool " if "netns-isolation" in enabled_tests else ""
+    assert_full_match(
+        f"{netns}ss -ltnH 'sport = :8999' | awk '{{print $4}}'",
+        re.escape(f"{ip('mempool')}:8999\n"),
+    )
+    # MariaDB stays in the host namespace, including with netns isolation.
+    assert_full_match("ss -ltnH 'sport = :3306' | awk '{print $4}'", r"127\.0\.0\.1:3306\n")
 
 @test("nodeinfo")
 def _():
