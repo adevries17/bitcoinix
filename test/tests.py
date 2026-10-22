@@ -1,4 +1,6 @@
 from collections import OrderedDict
+from urllib.parse import parse_qs, urlparse
+import base64
 import hmac
 import json
 import os
@@ -409,6 +411,21 @@ def _():
 def _():
     assert_running("clightning")
     assert_matches("runuser -u operator -- lnconnect-clnrest --url", ".onion")
+
+@test("lnconnect-clnrest-cert")
+def _():
+    assert_running("clightning")
+    host = ip("clightning")
+    url = urlparse(succeed(f"runuser -u operator -- lnconnect-clnrest --host {host} --url").strip())
+    assert url.scheme == "clnrest" and url.hostname == host
+    encoded_cert = parse_qs(url.query)["cert"][0]
+    url_cert = base64.urlsafe_b64decode(encoded_cert + "===")
+    # Compare with the TLS handshake, so a client certificate cannot pass this check.
+    server_cert = succeed(
+        f"openssl s_client -connect {host}:{url.port} </dev/null 2>/dev/null "
+        "| openssl x509 -outform DER | base64 -w0"
+    )
+    assert url_cert == base64.b64decode(server_cert), "Connection URL contains the wrong TLS certificate"
 
 @test("lndconnect-local-bind")
 def _():

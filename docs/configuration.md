@@ -100,6 +100,12 @@ with their original permissions. Do not reuse them. If another application used
 this macaroon, give it a separate macaroon with the permissions it needs via
 `services.lnd.macaroons`.
 
+`lnconnect-clnrest` now includes clnrest's server certificate (`server.pem`) in
+direct connection URLs. Previously it included the mutual-TLS client certificate
+(`client.pem`), which did not match the certificate presented by clnrest. Regenerate
+direct connection URLs and reconnect clients. Tor and WireGuard URLs use `--nocert`
+and are unaffected.
+
 c-lightning-REST support has been removed because it is no longer maintained.
 Remove `services.clightning-rest` (or the legacy `services.rtl.cl-rest`) and any
 associated onion service or network namespace settings from your configuration.

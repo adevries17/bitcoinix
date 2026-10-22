@@ -31,6 +31,8 @@ let
         (mkIfTest "lnd" [ openssl ])
         # Needed to authenticate with charge-lnd's macaroon
         (mkIfTest "charge-lnd" [ curl xxd ])
+        # Compare the certificate in a connection URL with the live TLS certificate
+        (mkIfTest "lnconnect-clnrest-cert" [ openssl ])
         # Needed to trace the commands run by secret generation
         (mkIfTest "secrets-no-argv" [ strace ])
       ]);
@@ -142,6 +144,8 @@ let
 
       tests.lndconnect-onion-lnd = with cfg.lnd.lndconnect; enable && onion;
       tests.lnconnect-onion-clnrest = with cfg.clightning.plugins.clnrest.lnconnect; enable && onion;
+      tests.lnconnect-clnrest-cert = with cfg.clightning.plugins.clnrest;
+        enable && lnconnect.enable && !lnconnect.onion;
 
       # lndconnect without onion must leave the REST servers on localhost.
       # With netns-isolation, the addresses are set by netns-isolation.

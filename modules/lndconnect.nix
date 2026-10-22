@@ -186,7 +186,7 @@ in {
               enableOnion = clnrest.lnconnect.onion;
               onionService = "${operatorName}/clnrest";
               port = clnrest.port;
-              certPath = "${clightning.networkDir}/client.pem";
+              certPath = "${clightning.networkDir}/server.pem";
               authSecretPath = "${clightning.networkDir}/admin-rune";
             }
           )];
