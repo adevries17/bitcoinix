@@ -847,11 +847,67 @@ def _():
 
     assert_file_exists("secrets/lnd-wallet-password")
 
-# Impure: restarts services
+# Impure: stops, starts and restarts bitcoind and its dependents
 @test("restart-bitcoind")
 def _():
-    # Sanity-check system by restarting bitcoind.
+    # lnd, electrs and clightning `require` bitcoind and are `wantedBy` it.
+    # A deploy that changes the bitcoind unit stops bitcoind and starts it
+    # again. The stop propagates to the dependents. The start must bring them
+    # back. An explicit stop must keep everything down.
+    dependents = [unit for unit in ["lnd", "clightning", "electrs"] if unit in enabled_tests]
+
+    def state(unit):
+        return succeed(f"systemctl show -P ActiveState {unit}").strip()
+
+    def inactive_since(unit):
+        return succeed(f"systemctl show -P InactiveEnterTimestampMonotonic {unit}").strip()
+
+    def wait_for_bitcoind():
+        machine.wait_until_succeeds("runuser -u operator -- bitcoin-cli getnetworkinfo")
+
+    # 0. 'backups' and 'stop-electrs' may have left units down. Start each one
+    # explicitly so that only the steps below rely on `wantedBy`.
+    succeed("systemctl start bitcoind")
+    wait_for_bitcoind()
+    for unit in dependents:
+        succeed(f"systemctl start {unit}")
+        machine.wait_for_unit(unit)
+
+    # A dependent can end up `failed` instead of `inactive` when it hits its
+    # stop timeout (clightning with clboss has TimeoutStopSec=500ms here).
+    # Either way it's down, and a stop job never triggers Restart=.
+    stopped = "inactive|failed"
+
+    # 1. An explicit stop propagates and sticks.
+    succeed("systemctl stop bitcoind")
+    for unit in dependents:
+        machine.wait_until_succeeds(f"[[ $(systemctl show -P ActiveState {unit}) =~ ^({stopped})$ ]]")
+    stopped_at = {unit: inactive_since(unit) for unit in ["bitcoind"] + dependents}
+    # Longer than every dependent's RestartSec (10s), so a restart that pulled
+    # bitcoind back up would show here.
+    machine.sleep(25)
+    for unit, since in stopped_at.items():
+        assert re.fullmatch(stopped, state(unit)), f"{unit} came back after an explicit stop"
+        assert inactive_since(unit) == since, f"{unit} was restarted after an explicit stop"
+
+    # 2. The start half of a deploy brings the dependents back.
+    # `wait_for_unit` raises on `failed` even with a start job queued, so clear
+    # that state first. `inactive` with no job queued still raises.
+    succeed(f"systemctl reset-failed {' '.join(dependents)}")
+    succeed("systemctl start bitcoind")
+    wait_for_bitcoind()
+    for unit in dependents:
+        machine.wait_for_unit(unit)
+    # Give them time to connect, then check they are still up.
+    machine.sleep(15)
+    for unit in dependents:
+        machine.wait_for_unit(unit)
+
+    # 3. A plain restart propagates and everything is up afterwards.
     succeed("systemctl restart bitcoind")
+    wait_for_bitcoind()
+    for unit in dependents:
+        machine.wait_for_unit(unit)
 
 # Impure: restarts services
 @test("config-replace")

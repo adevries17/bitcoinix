@@ -355,6 +355,9 @@ let
 
     regtestBase = { config, pkgs, ... }: {
       tests.regtest = true;
+      # On regtest, electrs is live at this point and the Lightning daemons
+      # are synced, so the restart test covers fully running dependents.
+      tests.restart-bitcoind = true;
       test.data.num_blocks = 100;
 
       services.bitcoind.regtest = true;
