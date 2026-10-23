@@ -358,6 +358,7 @@ let
       # On regtest, electrs is live at this point and the Lightning daemons
       # are synced, so the restart test covers fully running dependents.
       tests.restart-bitcoind = true;
+      tests.lnd-restart-on-clean-exit = config.services.lnd.enable;
       test.data.num_blocks = 100;
 
       services.bitcoind.regtest = true;

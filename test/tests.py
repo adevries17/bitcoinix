@@ -1005,6 +1005,30 @@ def _():
             f"[[ $(curl -fsS http://{ip('nginx')}:60845/api/v1/blocks/tip/height) == {num_blocks} ]]"
         )
 
+# Impure: restarts lnd. Runs after `regtest`, so lnd is synced.
+@test("lnd-restart-on-clean-exit")
+def _():
+    # `lncli stop` shuts lnd down cleanly (exit status 0), like lnd's chain
+    # backend health check does when bitcoind stays unreachable. lnd must come
+    # back on its own (`Restart = "always"`).
+    #
+    # Pause the charge-lnd timer first: charge-lnd `requires` lnd, so a timer
+    # tick during this test would start lnd itself and hide a missing
+    # `Restart=`. RTL only `wants` lnd and keeps running while lnd is down.
+    timers = ["charge-lnd.timer"] if "charge-lnd" in enabled_tests else []
+    for unit in timers:
+        succeed(f"systemctl stop {unit}")
+    assert_running("lnd")
+    before = succeed("systemctl show -P InvocationID lnd").strip()
+    succeed("runuser -u operator -- lncli stop")
+    # Right after `lncli stop`, lnd may still be active (shutting down).
+    # Poll for a new invocation instead of polling `is-active`.
+    machine.wait_until_succeeds(f"[[ $(systemctl show -P InvocationID lnd) != '{before}' ]]")
+    machine.wait_for_unit("lnd")
+    machine.wait_until_succeeds("runuser -u operator -- lncli getinfo")
+    for unit in timers:
+        succeed(f"systemctl start {unit}")
+
 @test("trustedcoin")
 def _():
     def expect_clightning_log(str):
