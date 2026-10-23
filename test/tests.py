@@ -199,10 +199,8 @@ def _():
 @test("bitcoind-rest")
 def _():
     data = test_data["bitcoind-rest"]
-    # Evaluated in Nix: REST with a non-local `rpc.allowip` source fails evaluation
-    # unless explicitly allowed
-    assert data["nonLocalRefused"], "REST with a non-local rpc.allowip source was not refused"
-    assert data["nonLocalAllowedWithOptIn"], "rest.allowNonLocal did not allow REST"
+    # Evaluation checks run in Nix; report the names of any failing cases.
+    assert not data["failedCases"], f"REST assertion cases failed: {data['failedCases']}"
 
     rest = f"http://{ip('bitcoind')}:{data['rpcPort']}/rest"
     url = f"{rest}/chaininfo.json"

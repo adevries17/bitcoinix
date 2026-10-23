@@ -52,22 +52,27 @@ let
 
       tests.bitcoind-rest = cfg.bitcoind.enable;
       test.data.bitcoind-rest = let
-        # Evaluate this config with REST enabled and a non-local RPC source
-        failedAssertions = extraConfig: let
+        # Keep fixture values independent of the scenario, including mkForce.
+        restAllowed = { allowNonLocal ? false, allowip ? [ "127.0.0.1" ] }: let
           extended = extendModules {
             modules = [{
-              services.bitcoind.rest.enable = mkForce true;
-              services.bitcoind.rpc.allowip = [ "10.10.0.0/24" ];
-            } extraConfig];
+              services.bitcoind.rest.enable = mkOverride 0 true;
+              services.bitcoind.rest.allowNonLocal = mkOverride 0 allowNonLocal;
+              services.bitcoind.rpc.allowip = mkOverride 0 allowip;
+            }];
           };
-        in map (x: x.message) (builtins.filter (x: !x.assertion) extended.config.assertions);
-        isRestAssertion = hasInfix "bitcoind REST interface is unauthenticated";
+        in !(any (a: !a.assertion && hasInfix "bitcoind REST interface is unauthenticated" a.message)
+          extended.config.assertions);
+        lan = { allowip = [ "10.10.0.0/24" ]; };
+        cases = {
+          localhost = restAllowed { allowip = [ "127.0.0.1" "::1" ]; };
+          lanRefused = !restAllowed lan;
+          lanOptIn = restAllowed (lan // { allowNonLocal = true; });
+        };
       in {
         inherit (cfg.bitcoind.rest) enable;
         rpcPort = cfg.bitcoind.rpc.port;
-        nonLocalRefused = any isRestAssertion (failedAssertions {});
-        nonLocalAllowedWithOptIn =
-          !(any isRestAssertion (failedAssertions { services.bitcoind.rest.allowNonLocal = true; }));
+        failedCases = attrNames (filterAttrs (_: passed: !passed) cases);
       };
 
       services.bitcoind = {
