@@ -199,6 +199,13 @@ other clients access this database server over the network, explicitly set
 `services.mysql.settings.mysqld.bind-address` to the desired listen address.
 Existing explicit values of this option take precedence over the new default.
 
+lnd now restarts automatically after a clean exit, so it can recover after its
+chain backend health check shuts it down. By default, `lncli stop` also causes
+lnd to restart after 10 seconds. To keep lnd stopped for maintenance, use
+`sudo systemctl stop lnd` and update any scripts that relied on `lncli stop`
+leaving it down. Start it again with `sudo systemctl start lnd` when maintenance
+is complete.
+
 After updating any affected clients and settings, set
 `nix-bitcoin.configVersion = "0.1.2";`.
 
