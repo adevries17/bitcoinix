@@ -149,6 +149,18 @@ and `update-nix-bitcoin` refuses to move to a release older than the one pinned 
 
 ## Wall of Fame
 
+### bitcoinix
+
+| Researcher | Report | Advisory | Fix |
+| :-- | :-- | :-- | :-- |
+| [ostermayer](https://github.com/ostermayer), [bobberb](https://github.com/bobberb) | `lnd-create-macaroons` and the RTL credential scripts followed symlinks in service-user directories as root | [GHSA-m72m-4gw2-mfqw](https://github.com/bitcoinix/bitcoinix/security/advisories/GHSA-m72m-4gw2-mfqw) | [#34](https://github.com/bitcoinix/bitcoinix/pull/34), [#47](https://github.com/bitcoinix/bitcoinix/pull/47) |
+| [ostermayer](https://github.com/ostermayer) | `onion-addresses` copied Tor hostname files unchecked as root (config injection, operator-to-root race) | [GHSA-cc4h-g372-wqv3](https://github.com/bitcoinix/bitcoinix/security/advisories/GHSA-cc4h-g372-wqv3) | [#43](https://github.com/bitcoinix/bitcoinix/pull/43) |
+| [ostermayer](https://github.com/ostermayer) | The clightning config was written through a symlink in a group-writable data dir (operator to clightning code execution) | [GHSA-m787-rw34-jpm3](https://github.com/bitcoinix/bitcoinix/security/advisories/GHSA-m787-rw34-jpm3) | [#94](https://github.com/bitcoinix/bitcoinix/pull/94), [#114](https://github.com/bitcoinix/bitcoinix/pull/114) |
+
+All three are fixed in 0.1.1.
+
+### Upstream nix-bitcoin
+
 These reports were handled by the upstream nix-bitcoin project.
 
 | Researcher | Report | Fix | Reward | Payout transaction |
