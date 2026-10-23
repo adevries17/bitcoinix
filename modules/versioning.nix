@@ -286,6 +286,16 @@ let
         See docs/configuration.md, "Upgrading to config version 0.1.2".
       '';
     }
+    {
+      version = "0.1.2";
+      condition = config.services.lnd.enable;
+      message = ''
+        lnd now restarts automatically after a clean exit, including `lncli stop`.
+        To keep lnd stopped, use `systemctl stop lnd` instead. Update maintenance
+        scripts that rely on `lncli stop` leaving lnd down.
+        See docs/configuration.md, "Upgrading to config version 0.1.2".
+      '';
+    }
   ];
 
   clightningRestUsed = options.services.clightning-rest.isDefined
