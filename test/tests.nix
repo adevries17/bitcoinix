@@ -53,21 +53,35 @@ let
       tests.bitcoind-rest = cfg.bitcoind.enable;
       test.data.bitcoind-rest = let
         # Keep fixture values independent of the scenario, including mkForce.
-        restAllowed = { allowNonLocal ? false, allowip ? [ "127.0.0.1" ] }: let
+        restAllowed = {
+          enable ? true, allowNonLocal ? false,
+          allowip ? [ "127.0.0.1" ], extraConfig ? ""
+        }: let
           extended = extendModules {
             modules = [{
-              services.bitcoind.rest.enable = mkOverride 0 true;
+              services.bitcoind.rest.enable = mkOverride 0 enable;
               services.bitcoind.rest.allowNonLocal = mkOverride 0 allowNonLocal;
               services.bitcoind.rpc.allowip = mkOverride 0 allowip;
+              services.bitcoind.extraConfig = mkOverride 0 extraConfig;
             }];
           };
         in !(any (a: !a.assertion && hasInfix "bitcoind REST interface is unauthenticated" a.message)
           extended.config.assertions);
         lan = { allowip = [ "10.10.0.0/24" ]; };
+        raw = { extraConfig = "rpcallowip=10.10.0.0/24\nincludeconf=/etc/bitcoin-extra.conf"; };
         cases = {
           localhost = restAllowed { allowip = [ "127.0.0.1" "::1" ]; };
           lanRefused = !restAllowed lan;
           lanOptIn = restAllowed (lan // { allowNonLocal = true; });
+          rawAllowip = !restAllowed { extraConfig = "rpcbind=0.0.0.0\nrpcallowip=10.10.0.0/24"; };
+          rawWhitespace = !restAllowed { extraConfig = " \trpcallowip = 10.10.0.0/24 # LAN\r"; };
+          rawSection = !restAllowed { extraConfig = "regtest.rpcallowip=10.10.0.0/24"; };
+          rawInclude = !restAllowed { extraConfig = "[main]\nincludeconf=/etc/bitcoin-extra.conf"; };
+          rawOptIn = restAllowed (raw // { allowNonLocal = true; });
+          rawRestDisabled = restAllowed (raw // { enable = false; });
+          rawComments = restAllowed {
+            extraConfig = "# rpcallowip=10.10.0.0/24\n  # regtest.includeconf=extra.conf\nconnect=0 # rpcallowip";
+          };
         };
       in {
         inherit (cfg.bitcoind.rest) enable;

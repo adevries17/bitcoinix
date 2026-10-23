@@ -242,6 +242,8 @@ let
             Allow enabling the REST interface when `rpc.allowip` contains
             sources other than localhost and nix-bitcoin's network namespaces.
             These sources get unauthenticated REST access.
+            Also required for `rpcallowip` or `includeconf` directives in
+            `extraConfig`, whose effective allowlist is not checked here.
           '';
         };
         localSources = mkOption {
@@ -400,12 +402,26 @@ in {
   config = mkIf cfg.enable {
     assertions = let
       nonLocalSources = subtractLists ([ "127.0.0.1" "::1" ] ++ cfg.rest.localSources) cfg.rpc.allowip;
+      # Raw allowlists and included files can add sources outside rpc.allowip.
+      # Match section-qualified and negated keys too, but ignore comments.
+      extraConfigSetsAllowlist = any (line:
+        builtins.match "[[:space:]]*([^[:space:].=#]+[.])?(no)?(rpcallowip|includeconf)[[:space:]]*=.*" line != null
+      ) (splitString "\n" cfg.extraConfig);
     in [
       { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || nonLocalSources == [];
         message = ''
           The bitcoind REST interface is unauthenticated and would be reachable from
           these `services.bitcoind.rpc.allowip` sources: ${concatStringsSep ", " nonLocalSources}
           Remove them, or set `services.bitcoind.rest.allowNonLocal = true` to accept this.
+        '';
+      }
+      { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || !extraConfigSetsAllowlist;
+        message = ''
+          The bitcoind REST interface is unauthenticated, and `services.bitcoind.extraConfig`
+          contains `rpcallowip` or `includeconf` directives whose effective allowlist
+          cannot be checked. Move RPC sources to `services.bitcoind.rpc.allowip` and
+          remove the raw directives, or set `services.bitcoind.rest.allowNonLocal = true`
+          to accept unauthenticated REST access from every configured RPC source.
         '';
       }
     ];
