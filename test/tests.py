@@ -196,6 +196,34 @@ def _():
         log_has_string("bitcoind", "RPC User public not allowed to call method stop")
     )
 
+@test("bitcoind-rest")
+def _():
+    data = test_data["bitcoind-rest"]
+    # Evaluation checks run in Nix; report the names of any failing cases.
+    assert not data["failedCases"], f"REST assertion cases failed: {data['failedCases']}"
+
+    rest = f"http://{ip('bitcoind')}:{data['rpcPort']}/rest"
+    url = f"{rest}/chaininfo.json"
+    if not data["enable"]:
+        assert_full_match(f"curl -sS -o /dev/null -w '%{{http_code}}' {url}", "404")
+        return
+
+    # REST is unauthenticated
+    assert_matches(f"runuser -u nobody -- curl -fsS {url}", '"chain"')
+    # Fetch a block by height, in the binary format electrs uses
+    genesis = succeed(f"curl -fsS {rest}/blockhashbyheight/0.json | jq -r .blockhash").strip()
+    assert_full_match(f"curl -fsS {rest}/block/{genesis}.json | jq -r .hash", f"{genesis}\n")
+    assert_full_match(f"curl -fsS {rest}/block/{genesis}.bin | wc -c", r"[1-9][0-9]*\n")
+    if "netns-isolation" in enabled_tests:
+        # Namespaces without a connection to bitcoind can't reach REST
+        netns = test_data["netns"]
+        unconnected = [
+            n for n in enabled_tests.intersection(netns)
+            if n != "bitcoind" and n not in netns["bitcoind"]["availableNetns"]
+        ]
+        for n in unconnected:
+            machine.fail(f"ip netns exec nb-{n} curl -fsS --max-time 5 {url}")
+
 @test("rpc-whitelist")
 def _():
     data = test_data["rpc-whitelist"]

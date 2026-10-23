@@ -290,6 +290,19 @@ exposes RPC to every network the host is on. The public RPC whitelist limits
 which methods a caller may use, not who can connect. Scope `rpc.allowip` and
 the firewall rule to your LAN.
 
+If the REST interface is enabled (`services.bitcoind.rest.enable`), it is served
+on the RPC port without authentication. bitcoinix refuses to evaluate such a
+config when `rpc.allowip` contains non-local sources,
+unless you set `services.bitcoind.rest.allowNonLocal = true`.
+The recognized loopback entries are `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
+`::1` and `::1/128`. Use these spellings in `rpc.allowip` for local sources.
+
+With REST enabled, raw `rpcallowip` and `includeconf` directives in
+`services.bitcoind.extraConfig` are refused too, because their effective
+allowlist can't be checked. Use `rpc.allowip` for checked sources, or review all
+raw and included settings and set `services.bitcoind.rest.allowUncheckedConfig = true`.
+This keeps the `rpc.allowip` check, unlike `allowNonLocal`.
+
 ```nix
 services.bitcoind = {
   # Listen to RPC connections on all interfaces

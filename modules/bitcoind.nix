@@ -224,6 +224,50 @@ let
         default = false;
         description = "Enable the transaction index.";
       };
+      rest = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Enable the REST interface.
+            It is served on the RPC address and port without authentication. Every
+            source allowed by `rpc.allowip` can query blocks, transactions, the UTXO
+            set and the mempool, bypassing RPC users and `rpcwhitelist`.
+          '';
+        };
+        allowNonLocal = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Allow enabling the REST interface when `rpc.allowip` contains
+            sources other than localhost and nix-bitcoin's network namespaces.
+            These sources get unauthenticated REST access.
+            For loopback, use `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
+            `::1` or `::1/128` in `rpc.allowip`.
+            Also accepts `rpcallowip` and `includeconf` directives in
+            `extraConfig` (see `rest.allowUncheckedConfig`).
+          '';
+        };
+        allowUncheckedConfig = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Allow enabling the REST interface when `extraConfig` contains
+            `rpcallowip` or `includeconf` directives. Their effective allowlist
+            is not checked, so review all raw and included settings first.
+            Unlike `rest.allowNonLocal`, this keeps the check of `rpc.allowip`.
+          '';
+        };
+        localSources = mkOption {
+          internal = true;
+          type = types.listOf types.str;
+          default = [];
+          description = ''
+            `rpc.allowip` entries that are considered local for `rest.allowNonLocal`,
+            in addition to localhost.
+          '';
+        };
+      };
       zmqpubrawblock = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -310,6 +354,7 @@ let
     ${optionalString (cfg.dbCache != null) "dbcache=${toString cfg.dbCache}"}
     prune=${toString cfg.prune}
     ${optionalString cfg.txindex "txindex=1"}
+    ${optionalString cfg.rest.enable "rest=1"}
     ${optionalString (cfg.sysperms != null) "sysperms=${if cfg.sysperms then "1" else "0"}"}
     ${optionalString (cfg.disablewallet != null) "disablewallet=${if cfg.disablewallet then "1" else "0"}"}
     ${optionalString (cfg.assumevalid != null) "assumevalid=${cfg.assumevalid}"}
@@ -367,6 +412,36 @@ in {
   inherit options;
 
   config = mkIf cfg.enable {
+    assertions = let
+      localSources = [
+        "127.0.0.1" "127.0.0.1/32" "127.0.0.0/8" "::1" "::1/128"
+      ] ++ cfg.rest.localSources;
+      nonLocalSources = subtractLists localSources cfg.rpc.allowip;
+      # Raw allowlists and included files can add sources outside rpc.allowip.
+      # Match section-qualified and negated keys too, but ignore comments.
+      extraConfigSetsAllowlist = any (line:
+        builtins.match "[[:space:]]*([^[:space:].=#]+[.])?(no)?(rpcallowip|includeconf)[[:space:]]*=.*" line != null
+      ) (splitString "\n" cfg.extraConfig);
+    in [
+      { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || nonLocalSources == [];
+        message = ''
+          The bitcoind REST interface is unauthenticated and would be reachable from
+          these `services.bitcoind.rpc.allowip` sources: ${concatStringsSep ", " nonLocalSources}
+          Remove them, or set `services.bitcoind.rest.allowNonLocal = true` to accept this.
+        '';
+      }
+      { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || cfg.rest.allowUncheckedConfig
+                    || !extraConfigSetsAllowlist;
+        message = ''
+          The bitcoind REST interface is unauthenticated, and `services.bitcoind.extraConfig`
+          contains `rpcallowip` or `includeconf` directives whose effective allowlist
+          cannot be checked. Move RPC sources to `services.bitcoind.rpc.allowip` and
+          remove the raw directives, or review all raw and included settings and set
+          `services.bitcoind.rest.allowUncheckedConfig = true`.
+        '';
+      }
+    ];
+
     environment.systemPackages = [ cfg.package (hiPrio cfg.cli) ];
 
     services.bitcoind = mkMerge [
