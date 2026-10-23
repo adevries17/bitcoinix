@@ -196,6 +196,31 @@ def _():
         log_has_string("bitcoind", "RPC User public not allowed to call method stop")
     )
 
+@test("bitcoind-rest")
+def _():
+    data = test_data["bitcoind-rest"]
+    # Evaluated in Nix: REST with a non-local `rpc.allowip` source fails evaluation
+    # unless explicitly allowed
+    assert data["nonLocalRefused"], "REST with a non-local rpc.allowip source was not refused"
+    assert data["nonLocalAllowedWithOptIn"], "rest.allowNonLocal did not allow REST"
+
+    url = f"http://{ip('bitcoind')}:{data['rpcPort']}/rest/chaininfo.json"
+    if not data["enable"]:
+        assert_full_match(f"curl -sS -o /dev/null -w '%{{http_code}}' {url}", "404")
+        return
+
+    # REST is unauthenticated
+    assert_matches(f"runuser -u nobody -- curl -fsS {url}", '"chain"')
+    if "netns-isolation" in enabled_tests:
+        # Namespaces without a connection to bitcoind can't reach REST
+        netns = test_data["netns"]
+        unconnected = [
+            n for n in enabled_tests.intersection(netns)
+            if n != "bitcoind" and n not in netns["bitcoind"]["availableNetns"]
+        ]
+        for n in unconnected:
+            machine.fail(f"ip netns exec nb-{n} curl -fsS --max-time 5 {url}")
+
 @test("rpc-whitelist")
 def _():
     data = test_data["rpc-whitelist"]

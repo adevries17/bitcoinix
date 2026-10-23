@@ -3,7 +3,7 @@
 lib: nixBitcoinModule:
 let
   # Included in all scenarios
-  baseConfig = { config, pkgs, ... }: with lib; let
+  baseConfig = { config, pkgs, extendModules, ... }: with lib; let
     cfg = config.services;
     inherit (config.nix-bitcoin.lib.test) mkIfTest;
   in {
@@ -48,6 +48,26 @@ let
         btcpayserver = cfg.btcpayserver.enable;
         clightning-bcli = cfg.clightning.enable && cfg.clightning.useBcliPlugin;
         mempool = cfg.mempool.enable;
+      };
+
+      tests.bitcoind-rest = cfg.bitcoind.enable;
+      test.data.bitcoind-rest = let
+        # Evaluate this config with REST enabled and a non-local RPC source
+        failedAssertions = extraConfig: let
+          extended = extendModules {
+            modules = [{
+              services.bitcoind.rest.enable = mkForce true;
+              services.bitcoind.rpc.allowip = [ "10.10.0.0/24" ];
+            } extraConfig];
+          };
+        in map (x: x.message) (builtins.filter (x: !x.assertion) extended.config.assertions);
+        isRestAssertion = hasInfix "bitcoind REST interface is unauthenticated";
+      in {
+        inherit (cfg.bitcoind.rest) enable;
+        rpcPort = cfg.bitcoind.rpc.port;
+        nonLocalRefused = any isRestAssertion (failedAssertions {});
+        nonLocalAllowedWithOptIn =
+          !(any isRestAssertion (failedAssertions { services.bitcoind.rest.allowNonLocal = true; }));
       };
 
       services.bitcoind = {
@@ -318,6 +338,7 @@ let
     # All regtest-enabled services
     regtest = {
       imports = [ scenarios.regtestBase ];
+      services.bitcoind.rest.enable = true;
       services.clightning.enable = true;
       services.clightning.plugins.clnrest = {
         enable = true;
