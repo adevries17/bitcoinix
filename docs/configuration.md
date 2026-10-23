@@ -298,8 +298,10 @@ The recognized loopback entries are `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
 `::1` and `::1/128`. Use these spellings in `rpc.allowip` for local sources.
 
 With REST enabled, raw `rpcallowip` and `includeconf` directives in
-`services.bitcoind.extraConfig` also require this opt-in. Use `rpc.allowip` for
-checked sources, or review all raw and included settings before opting in.
+`services.bitcoind.extraConfig` are refused too, because their effective
+allowlist can't be checked. Use `rpc.allowip` for checked sources, or review all
+raw and included settings and set `services.bitcoind.rest.allowUncheckedConfig = true`.
+This keeps the `rpc.allowip` check, unlike `allowNonLocal`.
 
 ```nix
 services.bitcoind = {

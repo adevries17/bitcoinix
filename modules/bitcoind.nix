@@ -244,8 +244,18 @@ let
             These sources get unauthenticated REST access.
             For loopback, use `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
             `::1` or `::1/128` in `rpc.allowip`.
-            Also required for `rpcallowip` or `includeconf` directives in
-            `extraConfig`, whose effective allowlist is not checked here.
+            Also accepts `rpcallowip` and `includeconf` directives in
+            `extraConfig` (see `rest.allowUncheckedConfig`).
+          '';
+        };
+        allowUncheckedConfig = mkOption {
+          type = types.bool;
+          default = false;
+          description = ''
+            Allow enabling the REST interface when `extraConfig` contains
+            `rpcallowip` or `includeconf` directives. Their effective allowlist
+            is not checked, so review all raw and included settings first.
+            Unlike `rest.allowNonLocal`, this keeps the check of `rpc.allowip`.
           '';
         };
         localSources = mkOption {
@@ -420,13 +430,14 @@ in {
           Remove them, or set `services.bitcoind.rest.allowNonLocal = true` to accept this.
         '';
       }
-      { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || !extraConfigSetsAllowlist;
+      { assertion = !cfg.rest.enable || cfg.rest.allowNonLocal || cfg.rest.allowUncheckedConfig
+                    || !extraConfigSetsAllowlist;
         message = ''
           The bitcoind REST interface is unauthenticated, and `services.bitcoind.extraConfig`
           contains `rpcallowip` or `includeconf` directives whose effective allowlist
           cannot be checked. Move RPC sources to `services.bitcoind.rpc.allowip` and
-          remove the raw directives, or set `services.bitcoind.rest.allowNonLocal = true`
-          to accept unauthenticated REST access from every configured RPC source.
+          remove the raw directives, or review all raw and included settings and set
+          `services.bitcoind.rest.allowUncheckedConfig = true`.
         '';
       }
     ];

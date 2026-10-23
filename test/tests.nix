@@ -54,13 +54,14 @@ let
       test.data.bitcoind-rest = let
         # Keep fixture values independent of the scenario, including mkForce.
         restAllowed = {
-          enable ? true, allowNonLocal ? false,
+          enable ? true, allowNonLocal ? false, allowUncheckedConfig ? false,
           allowip ? [ "127.0.0.1" ], extraConfig ? ""
         }: let
           extended = extendModules {
             modules = [{
               services.bitcoind.rest.enable = mkOverride 0 enable;
               services.bitcoind.rest.allowNonLocal = mkOverride 0 allowNonLocal;
+              services.bitcoind.rest.allowUncheckedConfig = mkOverride 0 allowUncheckedConfig;
               services.bitcoind.rpc.allowip = mkOverride 0 allowip;
               services.bitcoind.extraConfig = mkOverride 0 extraConfig;
             }];
@@ -81,6 +82,8 @@ let
           rawSection = !restAllowed { extraConfig = "regtest.rpcallowip=10.10.0.0/24"; };
           rawInclude = !restAllowed { extraConfig = "[main]\nincludeconf=/etc/bitcoin-extra.conf"; };
           rawOptIn = restAllowed (raw // { allowNonLocal = true; });
+          rawUnchecked = restAllowed (raw // { allowUncheckedConfig = true; });
+          rawUncheckedKeepsAllowip = !restAllowed (raw // lan // { allowUncheckedConfig = true; });
           rawRestDisabled = restAllowed (raw // { enable = false; });
           rawComments = restAllowed {
             extraConfig = "# rpcallowip=10.10.0.0/24\n  # regtest.includeconf=extra.conf\nconnect=0 # rpcallowip";
