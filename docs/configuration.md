@@ -294,6 +294,8 @@ If the REST interface is enabled (`services.bitcoind.rest.enable`), it is served
 on the RPC port without authentication. bitcoinix refuses to evaluate such a
 config when `rpc.allowip` contains non-local sources,
 unless you set `services.bitcoind.rest.allowNonLocal = true`.
+The recognized loopback entries are `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
+`::1` and `::1/128`. Use these spellings in `rpc.allowip` for local sources.
 
 With REST enabled, raw `rpcallowip` and `includeconf` directives in
 `services.bitcoind.extraConfig` also require this opt-in. Use `rpc.allowip` for

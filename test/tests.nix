@@ -73,6 +73,9 @@ let
           localhost = restAllowed { allowip = [ "127.0.0.1" "::1" ]; };
           lanRefused = !restAllowed lan;
           lanOptIn = restAllowed (lan // { allowNonLocal = true; });
+          loopbackCidrs = restAllowed { allowip = [ "127.0.0.0/8" "127.0.0.1/32" "::1/128" ]; };
+          broadIPv4 = !restAllowed { allowip = [ "127.0.0.0/7" ]; };
+          broadIPv6 = !restAllowed { allowip = [ "::1/127" ]; };
           rawAllowip = !restAllowed { extraConfig = "rpcbind=0.0.0.0\nrpcallowip=10.10.0.0/24"; };
           rawWhitespace = !restAllowed { extraConfig = " \trpcallowip = 10.10.0.0/24 # LAN\r"; };
           rawSection = !restAllowed { extraConfig = "regtest.rpcallowip=10.10.0.0/24"; };

@@ -242,6 +242,8 @@ let
             Allow enabling the REST interface when `rpc.allowip` contains
             sources other than localhost and nix-bitcoin's network namespaces.
             These sources get unauthenticated REST access.
+            For loopback, use `127.0.0.1`, `127.0.0.1/32`, `127.0.0.0/8`,
+            `::1` or `::1/128` in `rpc.allowip`.
             Also required for `rpcallowip` or `includeconf` directives in
             `extraConfig`, whose effective allowlist is not checked here.
           '';
@@ -401,7 +403,10 @@ in {
 
   config = mkIf cfg.enable {
     assertions = let
-      nonLocalSources = subtractLists ([ "127.0.0.1" "::1" ] ++ cfg.rest.localSources) cfg.rpc.allowip;
+      localSources = [
+        "127.0.0.1" "127.0.0.1/32" "127.0.0.0/8" "::1" "::1/128"
+      ] ++ cfg.rest.localSources;
+      nonLocalSources = subtractLists localSources cfg.rpc.allowip;
       # Raw allowlists and included files can add sources outside rpc.allowip.
       # Match section-qualified and negated keys too, but ignore comments.
       extraConfigSetsAllowlist = any (line:
