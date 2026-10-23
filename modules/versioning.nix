@@ -296,6 +296,19 @@ let
         See docs/configuration.md, "Upgrading to config version 0.1.2".
       '';
     }
+    {
+      version = "0.1.2";
+      condition = config.services.btcpayserver.enable;
+      message = ''
+        BTCPay Server 2.4.5 blocks webhooks, invoice notification URLs and LNURL
+        requests to private network addresses (localhost, LAN, VPN) by default.
+        The Lightning node configured by bitcoinix is unaffected. To allow private
+        destinations, set
+        `systemd.services.btcpayserver.environment.BTCPAY_SSRFEXCEPTIONS`,
+        e.g. to "127.0.0.1:8080;10.8.0.0/24".
+        See docs/configuration.md, "Upgrading to config version 0.1.2".
+      '';
+    }
   ];
 
   clightningRestUsed = options.services.clightning-rest.isDefined

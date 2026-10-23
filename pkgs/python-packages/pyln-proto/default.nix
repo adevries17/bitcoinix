@@ -16,10 +16,15 @@ buildPythonPackage rec {
 
   inherit (clightning) src;
 
+  # Upstream depends on the `coincurve-cp314-fix` fork only for its Python 3.14
+  # wheels. nixpkgs builds `coincurve` from source and doesn't need the fork.
   postPatch = ''
     substituteInPlace pyproject.toml \
-      --replace-fail 'coincurve==20.0.0' 'coincurve==21.0.0'
+      --replace-fail 'coincurve-cp314-fix' 'coincurve'
   '';
+
+  # Upstream requires coincurve >= 22.0.1, nixpkgs has 21.0.0
+  pythonRelaxDeps = [ "coincurve" ];
 
   nativeBuildInputs = [ hatchling ];
 

@@ -206,6 +206,18 @@ lnd to restart after 10 seconds. To keep lnd stopped for maintenance, use
 leaving it down. Start it again with `sudo systemctl start lnd` when maintenance
 is complete.
 
+BTCPay Server 2.4.5 blocks outbound requests to private network addresses by
+default to prevent server-side request forgery. This affects webhooks, invoice
+notification URLs and LNURL requests that point to localhost, LAN or VPN
+addresses. The Lightning node that bitcoinix configures for BTCPay Server is
+unaffected. To allow specific private destinations, list them in BTCPay's
+`ssrfexceptions` setting:
+```nix
+systemd.services.btcpayserver.environment.BTCPAY_SSRFEXCEPTIONS = "127.0.0.1:8080;10.8.0.0/24";
+```
+Entries are exact hostnames, IP addresses or CIDR ranges, optionally with a port,
+separated by `;` or `,`.
+
 After updating any affected clients and settings, set
 `nix-bitcoin.configVersion = "0.1.2";`.
 
