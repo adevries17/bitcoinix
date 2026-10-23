@@ -204,13 +204,18 @@ def _():
     assert data["nonLocalRefused"], "REST with a non-local rpc.allowip source was not refused"
     assert data["nonLocalAllowedWithOptIn"], "rest.allowNonLocal did not allow REST"
 
-    url = f"http://{ip('bitcoind')}:{data['rpcPort']}/rest/chaininfo.json"
+    rest = f"http://{ip('bitcoind')}:{data['rpcPort']}/rest"
+    url = f"{rest}/chaininfo.json"
     if not data["enable"]:
         assert_full_match(f"curl -sS -o /dev/null -w '%{{http_code}}' {url}", "404")
         return
 
     # REST is unauthenticated
     assert_matches(f"runuser -u nobody -- curl -fsS {url}", '"chain"')
+    # Fetch a block by height, in the binary format electrs uses
+    genesis = succeed(f"curl -fsS {rest}/blockhashbyheight/0.json | jq -r .blockhash").strip()
+    assert_full_match(f"curl -fsS {rest}/block/{genesis}.json | jq -r .hash", f"{genesis}\n")
+    assert_full_match(f"curl -fsS {rest}/block/{genesis}.bin | wc -c", r"[1-9][0-9]*\n")
     if "netns-isolation" in enabled_tests:
         # Namespaces without a connection to bitcoind can't reach REST
         netns = test_data["netns"]
